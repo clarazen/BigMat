@@ -1,6 +1,8 @@
 using BigMat
 using Test
+using Random
 
-@testset "BigMat.jl" begin
-    # Write your tests here.
+@testset "TensorGP.jl" begin
+    include("MPT.jl")
+    include("ComputeTN.jl")
 end
