@@ -4,20 +4,36 @@
     import Base: *
     # summation of two MPTs
     function +(mpt1::MPT,mpt2::MPT)
-        N    = ndims(mpt1);
-        cores    = Vector{Array{Float64}}(undef,N);
-        cores[1] = cat(mpt1[1], mpt2[1],dims=N);
+        N        = order(mpt1);
+        cores    = Vector{Array{Float64,ndims(mpt1[1])}}(undef,N);
+        cores[1] = cat(mpt1[1], mpt2[1],dims=ndims(mpt1[1]));
         cores[N] = cat(mpt1[N], mpt2[N],dims=1);
         sizes = size(mpt1);
         rnks1 = rank(mpt1);
         rnks2 = rank(mpt2);
         for i = 2:N-1    
-            row1  = cat(mpt1[i], zeros((rnks1[i][1],sizes[i]...,rnks2[i][2])),dims=N);
-            row2  = cat(zeros((rnks2[i][1],sizes[i]...,rnks1[i][2])), mpt2[i],dims=N);
+            row1     = cat(mpt1[i], zeros((rnks1[i][1],sizes[i]...,rnks2[i][2])),dims=ndims(mpt1[i]));
+            row2     = cat(zeros((rnks2[i][1],sizes[i]...,rnks1[i][2])), mpt2[i],dims=ndims(mpt1[i]));
             cores[i] = cat(row1,row2,dims=1);
         end
                 
         MPT(cores);
+    end
+
+    function +(mpo::MPO,mat::Matrix{Float64})
+        return mpo2mat(mpo) + mat
+    end
+
+    function +(mat::Matrix{Float64},mpo::MPO)
+        return +(mpo,mat)
+    end
+
+    function -(mpo::MPO,mat::Matrix{Float64})
+        return mpo2mat(mpo) - mat
+    end
+
+    function -(mat::Matrix{Float64},mpo::MPO)
+        return mat - mpo2mat(mpo)
     end
 
     # multiplying MPT by a number

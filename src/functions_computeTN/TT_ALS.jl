@@ -1,67 +1,78 @@
-# different calls, either with maxiter or residual change under a certain value (maxiter default in case does not converge)
+# no initial tt, automatically with orthogonalization
 function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64})
-    maxiter = 1;
     N     = ndims(tensor);
     sizes = size(tensor);
     cores = Vector{Array{Float64,3}}(undef,N);
-    res   = Vector{Float64}();
     for i = 1:N-1 # creating site-N canonical initial tensor train
         tmp = qr(rand(rnks[i]*sizes[i], rnks[i+1]));
         cores[i] = reshape(Matrix(tmp.Q),(rnks[i], sizes[i], rnks[i+1]));
     end
     cores[N] = reshape(rand(rnks[N]*sizes[N]),(rnks[N], sizes[N], 1));
-    tt = MPT(cores);
+    tt = MPT(cores,N);
+    return TT_ALS(tensor,rnks,tt)
+end
+
+# with initial tt
+function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS)
+    return TT_ALS(tensor,rnks,tt,tt.normcore)
+end
+
+# with / without orthogonalization
+function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int64)
+    maxiter = 10;
+    N       = order(tt);
+    rnks    = rank(tt);
+    sizes   = size(tt);
 
     for i = 1:maxiter
-        # update last core   
-        Gleft    = supercores(tt,N);
-        newsizes = (prod(sizes[1:N-1]), sizes[N]);
-        tmp      = Gleft*reshape(tensor,Tuple(newsizes));
-        tt[N]    = reshape(tmp,(rnks[N],sizes[N],1));
-        ttNvec   = reshape(tmp,(length(tt[N]), 1));
-        err      = norm(kron(Matrix(I,sizes[N],sizes[N]),Gleft')*ttNvec-tensor[:])/norm(tensor[:]);
-        push!(res,err)
-        shiftMPTnorm(tt,N,-1);
-        
-        # update middle cores from right to left
-        for n = N-1:-1:2
-            Gleft, Gright = supercores(tt,n);
-            newsizes1     = (prod(sizes[1:n-1]), prod(sizes[n:N]));
-            tmp           = Gleft*reshape(tensor,newsizes1);
-            newsizes2     = (rnks[n]*sizes[n], prod(sizes[n+1:N]));
-            tmp           = reshape(tmp,newsizes2)*Gright;
-            tt[n]         = reshape(tmp,(rnks[n],sizes[n],rnks[n+1]));
-            ttnvec        = reshape(tmp,(length(tt[n]), 1));
-            err           = norm(kron(Gright,kron(Matrix(I,sizes[n],sizes[n]),Gleft'))*ttnvec-tensor[:])/norm(tensor[:]);
-            push!(res,err)
-            shiftMPTnorm(tt,n,-1);
-        end
-
-        # update first core
-        Gright   = supercores(tt,1);
-        newsizes = (sizes[1], prod(sizes[2:N]));
-        tmp      = reshape(tensor,Tuple(newsizes))*Gright;
-        tt[1]    = reshape(tmp,(1,sizes[1],rnks[2]));
-        tt1vec   = reshape(tmp,(length(tt[1]), 1));
-        err      = norm(kron(Gright,Matrix(I,sizes[1],sizes[1]))*tt1vec-tensor[:])/norm(tensor[:]);
-        push!(res,err)
-        shiftMPTnorm(tt,1,1);
-
-        # update middle cores from left to right
-        for n = 2:N-1
-            Gleft, Gright = supercores(tt,n);
-            newsizes1     = (prod(sizes[1:n-1]), prod(sizes[n:N]));
-            tmp           = Gleft*reshape(tensor,newsizes1);
-            newsizes2     = (rnks[n]*sizes[n], prod(sizes[n+1:N]));
-            tmp           = reshape(tmp,newsizes2)*Gright;
-            tt[n]         = reshape(tmp,(rnks[n],sizes[n],rnks[n+1]));
-            ttnvec        = reshape(tmp,(length(tt[n]), 1));
-            err           = norm(kron(Gright,kron(Matrix(I,sizes[n],sizes[n]),Gleft'))*ttnvec-tensor[:])/norm(tensor[:]);
-            push!(res,err)
-            shiftMPTnorm(tt,n,1);
+        for k = 1:2N-2
+            if normcore == 0
+                swipe = [collect(1:N)..., collect(N-1:2)...];
+                n     = swipe[k];
+                UTU   = getUTU(tt,n);
+                UTy   = getUTy(tt,tensor,n);
+                tt[n] = reshape(inv(UTU)*UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
+            else
+                swipe = [collect(normcore:N)..., collect(N-1:2)..., collect(1:normcore-1)...];
+                n     = swipe[k];
+                if normcore == 1
+                    Dir = Int.([ones(1,N-1)..., -ones(1,N-1)...]); 
+                elseif normcore == N
+                    Dir = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
+                else
+                    Dir = Int.([ones(1,N-normcore)...,-ones(1,N-1)...,ones(1,normcore-1)...]);
+                end
+                UTy   = getUTy(tt,tensor,n);
+                tt[n] = reshape(UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
+                shiftMPTnorm(tt,n,Dir[k])
+            end
         end
     end
-    return tt, res
+    return tt
+end
+
+##########################################
+# functions for ALS with orthogonalization
+function getUTy(tt::MPS,tensor::Array{Float64},n::Int64)
+    N     = order(tt);
+    sizes = size(tensor);
+    rnks  = rank(tt);
+    if n == N 
+        Gleft    = supercores(tt,N);
+        newsizes = (prod(sizes[1:N-1]), sizes[N]);
+        UTy      = Gleft*reshape(tensor,Tuple(newsizes));
+    elseif n == 1
+        Gright   = supercores(tt,1);
+        newsizes = (sizes[1], prod(sizes[2:N]));
+        UTy      = reshape(tensor,Tuple(newsizes))*Gright;
+    else
+        Gleft, Gright = supercores(tt,n);
+        newsizes1     = (prod(sizes[1:n-1]), prod(sizes[n:N]));
+        tmp           = Gleft*reshape(tensor,newsizes1);
+        newsizes2     = (rnks[n][1]*sizes[n], prod(sizes[n+1:N]));
+        UTy           = reshape(tmp,newsizes2)*Gright;
+    end
+    return UTy[:]
 end
 
 function supercores(tt::MPT{3},n::Int64)
@@ -118,4 +129,25 @@ function shiftMPTnorm(mpt::MPT,n::Int64,dir::Int64)
 
         mpt[n]     = reshape(Q, size(mpt[n]));
         mpt[n+dir] = nmodeproduct(R,mpt[n+dir],ind);
+end
+
+# function for ALS without orthogonalization
+function getUTU(tt::MPS,n::Int64)
+    N     = order(tt);
+    sizes = size(tt);
+    rnks  = rank(tt);
+
+    Gleft = [1];
+    for i = 1:n-1
+        Gleft = Gleft * contractcores(tt[i],tt[i]);
+    end
+    Gleft = reshape(Gleft,(rnks[n][1],rnks[n][1]));
+
+    Gright = [1];
+    for i = N:-1:n+1
+        Gright = contractcores(tt[i],tt[i]) * Gright;
+    end
+    Gright = reshape(Gright,(rnks[n][2],rnks[n][2]));
+
+    return kron(kron(Gright, Matrix(I,sizes[n][1],sizes[n][1])), Gleft)
 end

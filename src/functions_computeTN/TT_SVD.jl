@@ -7,20 +7,25 @@ function TT_SVD(tensor::Array{Float64},ϵ::Float64)
 ########################################################################
     N = ndims(tensor);
     cores = Vector{Array{Float64,3}}(undef,N);
-     
-    δ = ϵ / sqrt(N-1) * norm(tensor);
+    frobnorm = norm(tensor); 
+
+    δ = ϵ / sqrt(N-1) * frobnorm;
+    err2 = 0;
     rprev = 1;
     sizes = size(tensor);
     C = reshape( tensor, (sizes[1], Int(length(tensor) / sizes[1]) ));
     for k = 1 : N-1
         # truncated svd 
-        F   = svd!(C);
-        err = norm(F.S[end]);
+        F   = svd!(C); 
         rcurr = length(F.S);
-        while err <= δ && rcurr > 1
-            rcurr = rcurr-1;
-            err = norm(F.S[rcurr+1:end]);
+
+        sv2 = cumsum(reverse(F.S).^2);
+        tr  = Int(findfirst(sv2 .> δ^2))-1;
+        if tr > 0
+            rcurr = length(F.S) - tr;
+            err2 += sv2[tr];
         end
+        
         # new core
         cores[k] = reshape(F.U[:,1:rcurr],(rprev,sizes[k],rcurr));
         rprev    = rcurr;
@@ -28,6 +33,6 @@ function TT_SVD(tensor::Array{Float64},ϵ::Float64)
         C        = reshape(C,(rcurr*sizes[k+1], Int(length(C) / (rcurr*sizes[k+1])) ) );
     end
     cores[N] = reshape(C,(rprev,sizes[N],1));
-    MPT(cores);
+    return MPT(cores), sqrt(err2)/frobnorm
 end
 

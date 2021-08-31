@@ -3,7 +3,7 @@ function MPT_SVD(arrayaux::Array{Float64},middlesizes::Matrix{Int64},acc::Float6
     array  = copy(arrayaux);
     if size(middlesizes,1) == 1
         tensor = reshape(array,Tuple(middlesizes));
-        TT_SVD(tensor,acc);
+        return TT_SVD(tensor,acc);
     else
         sizes   = Tuple(reshape(middlesizes',(length(middlesizes),1)));
         array   = reshape(array,sizes);
@@ -11,8 +11,8 @@ function MPT_SVD(arrayaux::Array{Float64},middlesizes::Matrix{Int64},acc::Float6
         array   = permutedims(array,permind);
         resind  = Tuple([prod(col) for col in eachcol(middlesizes)]);
         tensor  = reshape(array,resind)
-        mps     = TT_SVD(tensor,acc);
+        mps,err = TT_SVD(tensor,acc);
         rnks    = rank(mps);
-        MPT( [reshape(mps[i],(rnks[i][1], middlesizes[:,i]..., rnks[i][2])) for i = 1:order(mps)] );
+        return MPT( [reshape(mps[i],(rnks[i][1], middlesizes[:,i]..., rnks[i][2])) for i = 1:order(mps)] ), err
     end   
 end

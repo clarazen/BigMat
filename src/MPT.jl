@@ -2,12 +2,14 @@
     # MPT type
     struct MPT{N}
         cores::Vector{Array{Float64,N}}
-        function MPT(cores::Vector{Array{Float64,N}}) where N
-            new{ndims(cores[1])}(cores) 
+        normcore::Int64
+        function MPT(cores::Vector{Array{Float64,N}},normcore::Int64) where N
+            new{ndims(cores[1])}(cores,normcore) 
         end
     end
+    MPT(cores) = MPT(cores,0);
 
-    # create aliases for MPS and MPO
+    # aliases for MPS and MPO
     const MPS = MPT{3};
     const MPO = MPT{4};
 
