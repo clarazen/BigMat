@@ -1,4 +1,4 @@
-@testset "TensorGP.jl" begin
+@testset "BigMat.jl" begin
     # tests for MPT_SVD, MPT_SVD, contract
     # vector to MPS
     v1      = [1.0; 4.5; 2; 7; 3; 7; 3.3; 10; 6; 8; 1.1; 4.6; 1; 6; 2; 7; 12; 4.5; 1; 0; 0; 3; 6; 2.1];
@@ -26,5 +26,21 @@
 
     # TT-ALS without orthogonalization needs to be checked. Wihtout pinv, the error is very high
     # maxiter + residulas need to be implemented
+
+    # test of rktp2tn
+    #u = rand(3,4);
+    Ũ = [rand(3,4),rand(3,4),rand(3,4)];
+    #Ũ = [u,u,u];
+    Umpo = rkrp2tn(Ũ);
+    Uapprox = mpo2mat(Umpo)
+    U12 = zeros(9,4);
+    @inbounds @simd for j = 1:4
+        @views kron!(U12[:,j],Ũ[1][:,j],Ũ[2][:,j])
+    end
+    Utrue = zeros(27,4);
+    @inbounds @simd for j = 1:4
+        @views kron!(Utrue[:,j],U12[:,j],Ũ[3][:,j])
+    end
+    @test norm(Utrue-Uapprox)/norm(Utrue) < 1e-10
 
 end
