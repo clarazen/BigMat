@@ -28,19 +28,36 @@
     # maxiter + residulas need to be implemented
 
     # test of rktp2tn
-    #u = rand(3,4);
-    Ũ = [rand(3,4),rand(3,4),rand(3,4)];
-    #Ũ = [u,u,u];
-    Umpo = rkrp2tn(Ũ);
-    Uapprox = mpo2mat(Umpo)
-    U12 = zeros(9,4);
-    @inbounds @simd for j = 1:4
+    Ũ = [rand(50,40),rand(50,40),rand(50,40)];
+    ϵ = 1.0;
+    Umpo,err2 = rkrp2tn(Ũ,ϵ);
+    Uapprox = mpo2mat(Umpo);
+    U12 = zeros(2500,40);
+    @inbounds @simd for j = 1:40
         @views kron!(U12[:,j],Ũ[1][:,j],Ũ[2][:,j])
     end
-    Utrue = zeros(27,4);
-    @inbounds @simd for j = 1:4
+    Utrue = zeros(2500*50,40);
+    @inbounds @simd for j = 1:40
         @views kron!(Utrue[:,j],U12[:,j],Ũ[3][:,j])
     end
-    @test norm(Utrue-Uapprox)/norm(Utrue) < 1e-10
+    @test norm(Utrue-Uapprox)/norm(Utrue) < ϵ
 
+    # get matrix entry from mpo2mat
+    Ktest = zeros(24,24);
+    linear = LinearIndices((1:2, 1:3, 1:4, 1:2, 1:3, 1:4));
+    for i1 = 1:2
+        for i2 = 1:3
+            for i3 = 1:4
+                for j1 = 1:2
+                    for j2 = 1:3
+                        for j3 = 1:4
+                            tmp = mpo2[1][:,i1,j1,:]*mpo2[2][:,i2,j2,:]*mpo2[3][:,i3,j3,:];
+                            Ktest[linear[i1,i2,i3,j1,j2,j3]] = tmp[1];
+                        end
+                    end
+                end
+            end
+        end
+    end
+    @test norm(Ktest-M2)/norm(M2) < 1e-10
 end

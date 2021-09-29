@@ -6,7 +6,9 @@ using LinearAlgebra, Base, Random
     # functions that are available for the user
     export MPT, size, order, length, rank, norm,
            MPT_SVD, MPT_ALS, eye, rkrp2tn,
-           mps2vec, mpo2mat
+           mps2vec, mpo2mat,
+           KathriRao, transpose, roundTT, 
+           mpo2mps, mps2mpo
 
     # package code
     include("MPT.jl")
@@ -22,6 +24,7 @@ using LinearAlgebra, Base, Random
     include("functions_tools/Contractions.jl")
     include("functions_tools/Unfoldings.jl")    
     include("functions_tools/MatrixAlgebra.jl")
+    include("functions_tools/roundTT.jl")
 
 
 end

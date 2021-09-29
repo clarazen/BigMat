@@ -5,7 +5,7 @@ using Test
 using Random
 
 
-@testset "TensorGP.jl" begin
+@testset "BigMat.jl" begin
     include("MPT.jl")
     include("ComputeTN.jl")
     include("MatrixAlgebra.jl") # inversion

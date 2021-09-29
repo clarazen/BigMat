@@ -28,8 +28,9 @@ function MPT_ALS(array::Array{Float64},middlesizes::Matrix{Int64},rnks::Vector{I
         permind = Tuple([ (i-1)*size(middlesizes,2)+j for j in 1:size(middlesizes,2) for i in 1:size(middlesizes,1) ]);
         array   = permutedims(array,permind);
         resind  = Tuple([prod(col) for col in eachcol(middlesizes)]);
-        tensor  = reshape(array,resind)
-        mps     = TT_ALS(tensor,rnks,mpt0);
+        tensor  = reshape(array,resind);
+        tt0     = mpo2mps(mpt0);
+        mps     = TT_ALS(tensor,rnks,tt0);
         rnks    = rank(mps);
         mpt = MPT( [reshape(mps[i],(rnks[i][1], middlesizes[:,i]..., rnks[i][2])) for i = 1:order(mps)] );
     end   

@@ -92,3 +92,19 @@
         size2 = size(core2);
         reshape(unfold(core1,[3],"right")*unfold(core2,[1],"left"),(size1[1],size1[2]*size2[2], size2[3]))
     end
+
+    function KathriRao(A::Matrix{Float64},B::Matrix{Float64},dims::Int64)
+            if dims == 1
+                C = zeros(size(A,1),size(A,2)*size(B,2));
+                @inbounds @simd for i = 1:size(A,1)
+                    @views kron!(C[i,:],A[i,:],B[i,:])
+                end
+            elseif dims == 2
+                C = zeros(size(A,1)*size(B,1),size(A,2));
+                @inbounds @simd for i = 1:size(A,2)
+                    @views kron!(C[:,i],A[:,i],B[:,i])
+                end
+            end
+        
+            return C
+    end

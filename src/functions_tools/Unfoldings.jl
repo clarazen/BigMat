@@ -34,3 +34,13 @@
         end
         MPT(cores);
     end
+
+    # dividing middlesizes from mps to get an mpo
+    function mps2mpo(mps::MPS,middlesizes::Matrix{Int64})
+        cores = Vector{Array{Float64,4}}(undef,order(mps));
+        rnks  = rank(mps);
+        for i = 1:order(mps)
+            cores[i] = reshape(mps[i],(rnks[i][1], middlesizes[1,i], middlesizes[2,i], rnks[i][2]));
+        end
+        MPT(cores);
+    end

@@ -1,3 +1,6 @@
 git add . (add all changes that I have made)
 git commit -m "my message"
 git push origin master
+
+
+pwd() to see current path

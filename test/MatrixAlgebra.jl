@@ -1,4 +1,5 @@
 @testset "BigMat.jl" begin
+    using LinearAlgebra
     # tests for \ (solving of linear system Ax = b and A*inv(K) = I)
     
     A = rand(64,64);
@@ -9,7 +10,7 @@
     mpo,err = MPT_SVD(A,[4 4 4; 4 4 4],0.0);
     @test norm(mps2vec(mpo\mps)-A\b)/norm(A\b) < 1e-5
 
-    # solve directly for inverse with A*inv(A) = i
+    # solve directly for inverse with A*inv(A) = I
     id        = eye([4 4 4; 4 4 4]);
     mpo1      = MPT([mpo[1:3]..., id[1:3]...]); 
     id        = Matrix(I,64,64);
@@ -33,5 +34,13 @@
     lyap = sum\idvec;
     lyap = reshape(mps2vec(lyap),(64,64));
     @test norm(lyap-inv(A))/norm(inv(A)) < 1e-5
+
+    # test of column-wise and row-wise Kronecker product (KathriRao)
+    A = rand(3,4);
+    B = rand(3,4);
+    C = rand(3,4);
+    @test size(KathriRao(A,B,1),2) == 16
+    @test size(KathriRao(A,B,2),1) == 9
     
+    @test norm(A.*B.*C) < norm(KathriRao(A,KathriRao(B,C,2),2))
 end

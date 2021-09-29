@@ -118,9 +118,10 @@ import Base: \, transpose
 
 ###############################################################################
     function transpose(mpo::MPO)
-
+        N     = order(mpo);
+        cores = Vector{Array{Float64,4}}(undef,N);
         for i = 1: order(mpo)
-            mpo[i] = permutedims(mpo[i],[1,3,2,4]);
+            cores[i] = permutedims(mpo[i],[1,3,2,4]);
         end
-        return mpo
+        return MPT(cores)
     end
