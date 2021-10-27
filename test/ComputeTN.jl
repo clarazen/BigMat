@@ -60,4 +60,11 @@
         end
     end
     @test norm(Ktest-M2)/norm(M2) < 1e-10
+
+
+    # test Hierarchical Tucker function
+    tensor = rand(5,5,5);
+    ranks  = [2,2,2];
+    @run leaves2roottrunc(tensor,ranks)
+
 end
