@@ -8,7 +8,8 @@ using LinearAlgebra, Base, Random
            MPT_SVD, MPT_ALS, eye, rkrp2tn, leaves2roottrunc,
            mps2vec, mpo2mat,
            KathriRao, transpose, roundTT, 
-           mpo2mps, mps2mpo
+           mpo2mps, mps2mpo,
+           unfold
 
     # package code
     include("MPT.jl")
