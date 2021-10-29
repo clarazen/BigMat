@@ -4,3 +4,5 @@ git push origin master
 
 
 pwd() to see current path
+
+git config --global init.defaultBranch main
