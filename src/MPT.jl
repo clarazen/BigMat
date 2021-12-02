@@ -1,6 +1,6 @@
 
     # MPT type
-    struct MPT{N}
+    mutable struct MPT{N}
         cores::Vector{Array{Float64,N}}
         normcore::Int64
         function MPT(cores::Vector{Array{Float64,N}},normcore::Int64) where N
