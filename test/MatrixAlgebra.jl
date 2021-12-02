@@ -43,4 +43,7 @@
     @test size(KathriRao(A,B,2),1) == 9
     
     @test norm(A.*B.*C) < norm(KathriRao(A,KathriRao(B,C,2),2))
+
+    # test matrix multiplication
+    @test norm(mps2vec(mpo*mpo*mps) - A*A*b)/norm(A*A*b) < 1e-10
 end
