@@ -26,21 +26,21 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int
 
     for i = 1:maxiter
         for k = 1:2N-2
-            if normcore == 0
-                swipe = [collect(1:N)..., collect(N-1:2)...];
+            if tt.normcore == 0
+                swipe = [collect(1:N)..., collect(N-1:-1:2)...];
                 n     = swipe[k];
                 UTU   = getUTU(tt,n);
                 UTy   = getUTy(tt,tensor,n);
                 tt[n] = reshape(inv(UTU)*UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
             else
-                swipe = [collect(normcore:N)..., collect(N-1:2)..., collect(1:normcore-1)...];
+                swipe = [collect(tt.normcore:N)..., collect(N-1:-1:2)..., collect(1:tt.normcore-1)...];
                 n     = swipe[k];
-                if normcore == 1
+                if tt.normcore == 1
                     Dir = Int.([ones(1,N-1)..., -ones(1,N-1)...]); 
-                elseif normcore == N
+                elseif tt.normcore == N
                     Dir = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
                 else
-                    Dir = Int.([ones(1,N-normcore)...,-ones(1,N-1)...,ones(1,normcore-1)...]);
+                    Dir = Int.([ones(1,N-tt.normcore)...,-ones(1,N-1)...,ones(1,tt.normcore-1)...]);
                 end
                 UTy   = getUTy(tt,tensor,n);
                 tt[n] = reshape(UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
@@ -127,9 +127,9 @@ function shiftMPTnorm(mpt::MPT,n::Int64,dir::Int64)
             Q = Qt';
         end
 
-        mpt[n]     = reshape(Q, size(mpt[n]));
-        mpt[n+dir] = nmodeproduct(R,mpt[n+dir],ind);
-        #mpt.normcore = mpt.normcore + dir; 
+        mpt[n]       = reshape(Q, size(mpt[n]));
+        mpt[n+dir]   = nmodeproduct(R,mpt[n+dir],ind);
+        mpt.normcore = mpt.normcore + dir; 
 end
 
 # function for ALS without orthogonalization
