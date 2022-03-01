@@ -17,6 +17,24 @@ function MPT_ALS(array::Array{Float64},middlesizes::Matrix{Int64},rnks::Vector{I
     return mpt
 end
 
+# TT-ALS for diagonal Matrix
+function MPT_ALS(diagonal::Diagonal,middlesizes::Matrix,rnks::Vector)
+    # initial ttm with diagonal core 
+    N      = length(rnks)-1;
+    tensor = reshape(diag(diagonal),Tuple(middlesizes));
+    tt     = TT_ALS(tensor,rnks);
+    cores  = Vector{Array{Float64,4}}(undef,N);
+    for i = 1:N
+        cores[i] = zeros(rnks[i],middlesizes[i],middlesizes[i],rnks[i+1])
+        for ri = 1:rnks[i]
+            for rii = 1:rnks[i+1]
+                cores[i][ri,:,:,rii] = Matrix(Diagonal(tt[i][ri,:,rii]))
+            end
+        end
+    end
+    return MPT(cores)
+end
+
 function MPT_ALS(array::Array{Float64},middlesizes::Matrix{Int64},rnks::Vector{Int64},mpt0::MPT)
     tensor = Array{Float64};
     if size(middlesizes,1) == 1
