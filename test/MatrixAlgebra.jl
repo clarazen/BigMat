@@ -1,4 +1,4 @@
-@testset "BigMat.jl" begin
+#@testset "BigMat.jl" begin
     using LinearAlgebra
     # tests for \ (solving of linear system Ax = b and A*inv(K) = I)
     
@@ -7,7 +7,8 @@
     b = rand(64,1);
         
     mps,err = MPT_SVD(b,[4 4 4],0.0);
-    mpo,err = MPT_SVD(A,[4 4 4; 4 4 4],0.0);
+    mpo,err = MPT_SVD(A,[4 4 4; 4 4 4],0.0)
+    mpo\mps
     @test norm(mps2vec(mpo\mps)-A\b)/norm(A\b) < 1e-5
 
     # solve directly for inverse with A*inv(A) = I
@@ -16,7 +17,7 @@
     id        = Matrix(I,64,64);
     id        = 1.0*id[:];
     idvec,err = MPT_SVD(id,[4 4 4 4 4 4],0.0);
-    invA      = sum\idvec;
+    invA      = mpo1\idvec;
     reshape(mps2vec(invA),(64,64));
     @test norm(lyap-inv(A))/norm(inv(A)) < 1e-5
 
@@ -46,4 +47,17 @@
 
     # test matrix multiplication
     @test norm(mps2vec(mpo*mpo*mps) - A*A*b)/norm(A*A*b) < 1e-10
-end
+
+    A = randn(8,4)
+    B = randn(8,8)
+    Attm,err = MPT_SVD(A,[2 2 2;2 2 1],0.0)
+    AB = *(Attm,B,3)
+    norm(AB-A*B)/norm(A*B)
+    ABA = AB*transpose(Attm)
+    norm(ABA-A*B*A')/norm(A*B*A')
+
+    # test pseudo inverse
+    @run approxpseudoinverse(Attm,0.0,0.0)
+    norm(inv(A) - mpo2mat(P))/norm(inv(A))
+
+#end
