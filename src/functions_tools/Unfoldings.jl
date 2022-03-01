@@ -44,3 +44,12 @@
         end
         MPT(cores);
     end
+
+    function mps2mpo(mps::MPS,middlesizes::Vector{Tuple{Int64, Int64}})
+        cores = Vector{Array{Float64,4}}(undef,order(mps));
+        rnks  = rank(mps);
+        for i = 1:order(mps)
+            cores[i] = reshape(mps[i],(rnks[i][1], middlesizes[i][1], middlesizes[i][2], rnks[i][2]));
+        end
+        MPT(cores);
+    end
