@@ -1,15 +1,18 @@
 module BigMat
 
-using LinearAlgebra, Base, Random
+using LinearAlgebra, Base, Random, Optim
     import LinearAlgebra: norm
 
     # functions that are available for the user
     export MPT, size, order, length, rank, norm,
+           getelement, getrow, getcol, outerprod,
            MPT_SVD, MPT_ALS, eye, rkrp2tn, leaves2roottrunc,
            mps2vec, mpo2mat,
            KathriRao, transpose, roundTT, 
            mpo2mps, mps2mpo,
-           unfold
+           unfold, diag,
+           TNrSVD,
+           approxpseudoinverse
 
     # package code
     include("MPT.jl")
@@ -27,6 +30,7 @@ using LinearAlgebra, Base, Random
     include("functions_tools/Unfoldings.jl")    
     include("functions_tools/MatrixAlgebra.jl")
     include("functions_tools/roundTT.jl")
+    include("functions_tools/TNrSVD.jl")
 
 
 end
