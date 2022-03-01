@@ -36,3 +36,38 @@ function TT_SVD(tensor::Array{Float64},ϵ::Float64)
     return MPT(cores), sqrt(err2)/frobnorm
 end
 
+function TT_SVD(tensor::Array{Float64},d::Int,ϵ::Float64)
+    ########################################################################    
+    # for a symmetric matrix
+        cores = Vector{Array{Float64,3}}(undef,d);
+        S     = zeros(2)
+        frobnorm = norm(tensor); 
+    
+        δ     = ϵ / sqrt(d-1) * frobnorm;
+        err2  = 0;
+        rprev = 1;
+        sizes = size(tensor);
+        C     = reshape( tensor, (sizes[1], Int(length(tensor) / sizes[1]) ));
+        for k = 1 : d
+            # truncated svd 
+            F   = svd!(C); 
+            rcurr = length(F.S);
+    
+            sv2 = cumsum(reverse(F.S).^2);
+            tr  = Int(findfirst(sv2 .> δ^2))-1;
+            if tr > 0
+                rcurr = length(F.S) - tr;
+                err2 += sv2[tr];
+            end
+            
+            # new core
+            
+            cores[k] = reshape(F.U[:,1:rcurr],(rprev,sizes[k],rcurr));
+            rprev    = rcurr;
+            C        = Diagonal(F.S[1:rcurr])*F.Vt[1:rcurr,:];
+            C        = reshape(C,(rcurr*sizes[k+1], Int(length(C) / (rcurr*sizes[k+1])) ) );
+            S        = F.S[1:rcurr]
+        end
+        return MPT(cores), S, sqrt(err2)/frobnorm
+    end
+    
