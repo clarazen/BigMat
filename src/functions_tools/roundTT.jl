@@ -38,3 +38,9 @@ function roundTT(mpt::MPT, ϵ::Float64)
         end
         return MPT(cores);
     end
+
+    function roundTT(ttm::MPT{4}, ϵ::Float64)
+        tt = mpo2mps(ttm);
+        tt = roundTT(tt, ϵ)
+        return mps2mpo(tt,size(ttm))
+    end
