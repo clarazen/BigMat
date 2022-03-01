@@ -55,9 +55,9 @@
 
     function contractmodes(tensor1::Array{Float64},tensor2::Array{Float64},ind_contract::Matrix{Int64})
         # contract specified indices and free the remaining indices
-        matrix1  = unfold(tensor1,ind_contract[:,1],"right");
-        matrix2  = unfold(tensor2,ind_contract[:,2],"left");
-        matrix   = matrix1*matrix2;
+        matrix1  = unfold(tensor1,ind_contract[:,1],"right")
+        matrix2  = unfold(tensor2,ind_contract[:,2],"left")
+        matrix   = matrix1*matrix2
         sizes_1  = deleteat!(collect(size(tensor1)),sort(ind_contract[:,1]));
         sizes_2  = deleteat!(collect(size(tensor2)),sort(ind_contract[:,2]));
         newsizes = vcat(sizes_1,sizes_2);
