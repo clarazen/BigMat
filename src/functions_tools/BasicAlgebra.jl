@@ -28,6 +28,10 @@
         return +(mpo,mat)
     end
 
+    function -(mpo1::MPO,mpo2::MPO)
+        return +(mpo1,-1.0*mpo2)
+    end
+
     function -(mpo::MPO,mat::Matrix{Float64})
         return mpo2mat(mpo) - mat
     end
@@ -37,13 +41,14 @@
     end
 
     # multiplying MPT by a number
-    function *(mpt::MPT,a::Int64)
+    function *(mpt::MPT,a::Float64)
         # if mpt in site-k-canonical format that multiply norm core with scalar
         mpt[1] = a*mpt[1];
+        return mpt
         #MPT(pushfirst!(mpt[2:ndims(mpt)],a*mpt[1]))
     end
 
-    function *(a::Int64,mpt::MPT)
+    function *(a::Float64,mpt::MPT)
         *(mpt,a)
     end
 
@@ -57,7 +62,7 @@
         MPT(cores)
     end
 
-    # matrix by matrix product (retirns mpo)
+    # matrix by matrix product (returns mpo)
     function *(mpo1::MPT{4},mpo2::MPT{4})
         N = order(mpo1);
         cores = Vector{Array{Float64,4}}(undef,N);
@@ -87,10 +92,51 @@
         return c[1]
     end
 
+    function outerprod(tt1::MPT{3},tt2::MPT{3})
+        N     = order(tt1);
+        cores = Vector{Array{Float64,4}}(undef,N);
+        r1 = rank(tt1);
+        r2 = rank(tt2);
+        s1 = size(tt1);
+        s2 = size(tt2);
+        for i = 1:N
+            g1  = reshape(tt1[i],(length(tt1[i]), 1));
+            g2  = reshape(tt2[i],(length(tt2[i]), 1));
+            tmp = kron(g1,g2);
+            tmp = reshape(tmp,(r1[i][1], s1[i][1], r1[i][2], r2[i][1], s2[i][1], r2[i][2]));
+            tmp = permutedims(tmp,[1 4 2 5 3 6]);
+            tmp = reshape(tmp,(r1[i][1]*r2[i][1], s1[i][1], s2[i][1], r1[i][2]*r2[i][2]));
+            cores[i]  = tmp;
+        end
+        return MPT(cores);
+    end
+
     function *(core1::Array{Float64,3},core2::Array{Float64,3})
         size1 = size(core1);
         size2 = size(core2);
         reshape(unfold(core1,[3],"right")*unfold(core2,[1],"left"),(size1[1],size1[2]*size2[2], size2[3]))
+    end
+
+    function *(cores::Vector{Array{Float64,3}})
+        tmp = cores[1]*cores[2]
+        for i = 3:length(cores)
+            tmp = tmp*cores[i]
+        end
+        return tmp[1,:,:]
+    end
+
+    function *(ttm::MPT{4},A::Matrix,ind::Int) # for now work only if second index is in last core
+        d = order(ttm)
+        cores = Vector{Array{Float64,4}}(undef,d)
+        for i = 1:d-1
+            cores[i] = ttm[i]
+        end
+        #ttm[ind] = nmodeproduct(A,ttm[ind],3)
+        tmp = ttm[ind]
+        tmp = reshape(tmp,(rank(ttm)[ind][1]*size(ttm)[ind][1],size(ttm)[ind][2]))
+        tmp = tmp*A
+        cores[ind] = reshape(tmp,(rank(ttm)[ind][1],size(ttm)[ind][1],size(A,2),1))
+        return MPT(cores)
     end
 
     function KathriRao(A::Matrix{Float64},B::Matrix{Float64},dims::Int64)
@@ -108,3 +154,4 @@
         
             return C
     end
+
