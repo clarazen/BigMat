@@ -51,6 +51,8 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int
     return tt
 end
 
+
+
 ##########################################
 # functions for ALS with orthogonalization
 function getUTy(tt::MPS,tensor::Array{Float64},n::Int64)
@@ -150,5 +152,5 @@ function getUTU(tt::MPS,n::Int64)
     end
     Gright = reshape(Gright,(rnks[n][2],rnks[n][2]));
 
-    return kron(kron(Gright, Matrix(I,sizes[n][1],sizes[n][1])), Gleft)
+    return kron(kron(Gright, 1.0*Matrix(I,sizes[n][1],sizes[n][1])), Gleft)
 end
