@@ -1,4 +1,4 @@
-@testset "BigMat.jl" begin
+#@testset "BigMat.jl" begin
     # tests for MPT_SVD, MPT_SVD, contract
     # vector to MPS
     v1      = [1.0; 4.5; 2; 7; 3; 7; 3.3; 10; 6; 8; 1.1; 4.6; 1; 6; 2; 7; 12; 4.5; 1; 0; 0; 3; 6; 2.1];
@@ -61,10 +61,26 @@
     end
     @test norm(Ktest-M2)/norm(M2) < 1e-10
 
+    # TT-SVD for symmetrical matrix
+    X, y, f, K  = gensynthdata(1024,1,0.01,1.0,1.0)
+    Kttm,Lttm,Uttm,S,err = MPT_SVD(Symmetric(K),[4 4 4 4 4; 4 4 4 4 4],0.1)
+    k = mps2vec(Kttm)
+    Kt = reshape(k,(4,4,4,4,4,4,4,4,4,4))
+    Kt = permutedims(Kt,[1 2 3 4 5 10 9 8 7 6])
+    Kapprox = reshape(Kt,(1024, 1024))
+    norm(K[:]-Kt[:])/norm(K[:])
+    rank(Kttm)
+
+    L  = (Kttm[1]*Kttm[2]*Kttm[3]*Kttm[4]*Kttm[5])[1,:,:]
+    L2 = mpo2mat(Lttm)
+    norm(L*L' - K)/norm(K)
+    norm(L2*L2' - K)/norm(K)
+    U = mpo2mat(Uttm)
+    norm(U*Diagonal(S)*U'-K)/norm(K)
 
     # test Hierarchical Tucker function
     tensor = rand(5,5,5);
     ranks  = [2,2,2];
     @run leaves2roottrunc(tensor,ranks)
 
-end
+#end
