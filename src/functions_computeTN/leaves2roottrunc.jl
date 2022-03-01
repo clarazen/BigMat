@@ -1,4 +1,4 @@
-function leaves2roottrunc(tensor::Array{Float64},p::Int64,ranks::Vector{Int64})
+function leaves2roottrunc(tensor::Array{Float64},dimtree,ranks)
     # Source: Algorithm 2 of Hierarchical SVD of Tensors by Lars Grasedyck
     N  = ndims(tensor);
     sz = size(tensor);
@@ -14,9 +14,11 @@ function leaves2roottrunc(tensor::Array{Float64},p::Int64,ranks::Vector{Int64})
             Cp = unfold(Cp,[t+1],"left");
         end
     end
-    
+    Cl = Cp;
     for l = p-1:-1:1
-        
+        for t = 1:dimtree[l]
+            
+        end
     end
 
 end
