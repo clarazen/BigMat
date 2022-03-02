@@ -48,16 +48,16 @@
     # test matrix multiplication
     @test norm(mps2vec(mpo*mpo*mps) - A*A*b)/norm(A*A*b) < 1e-10
 
-    A = randn(8,4)
+    A = randn(8,8)
     B = randn(8,8)
-    Attm,err = MPT_SVD(A,[2 2 2;2 2 1],0.0)
+    Attm,err = MPT_SVD(A,[2 2 2;2 2 2],0.0)
     AB = *(Attm,B,3)
     norm(AB-A*B)/norm(A*B)
     ABA = AB*transpose(Attm)
     norm(ABA-A*B*A')/norm(A*B*A')
 
     # test pseudo inverse
-    @run approxpseudoinverse(Attm,0.0,0.0)
+    P = approxpseudoinverse(Attm,0.0,0.0)
     norm(inv(A) - mpo2mat(P))/norm(inv(A))
 
 #end
