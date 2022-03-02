@@ -158,8 +158,9 @@ function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
         r2 = Z2*r2
         R2[n] = reshape(r2,(rnksP[n][1],rnks[n][1]))
     end
-    l1t = 1; l2t = 1;
     #while sth < ϵ
+    for i = 1:100
+        l1t = 1; l2t = 1;
         for n = 1:N-2
             # solve local optimization problem
             Ā = getĀ(L1[n],A[n],A[n+1],R1[n+1])
@@ -183,13 +184,42 @@ function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
             P[n]   = reshape(U,(rnks[n][1],sizes[n][1],sizes[n][1],rnks[n][2]))
             P[n+1] = reshape(S*V',(rnks[n+1][1],sizes[n+1][1],sizes[n+1][1],rnks[n+1][2]))
 
-            Z1,Z2 = getZ(P[n],A[n])
-            l1t = l1t*Z1
-            l2t = l2t*Z2
+            Z1,Z2   = getZ(P[n],A[n])
+            l1t     = l1t*Z1
+            l2t     = l2t*Z2
             L1[n+1] = reshape(l1t,(rnksP[n+1][1],rnks[n+1][1],rnks[n+1][1],rnksP[n+1][1]))
             L2[n+1] = reshape(l2t,(rnksP[n+1][1],rnks[n+1][1]))
         end
-    #end
+        for n = N-1:-1:2
+            # solve local optimization problem
+            Ā = getĀ(L1[n-1],A[n-1],A[n],R1[n])
+            b̄ = getb̄(L2[n-1],A[n-1],A[n],R2[n])
+            f(p) = p'*Ā*p - 2*p'*b̄ + 0.1*p'*p
+            res  =  optimize(f,(Ptt[n-1]*Ptt[n])[:],LBFGS())
+            p2   = Optim.minimizer(res)
+            P2   = reshape(p2,(sizes[n-1][1]*sizes[n-1][2]*rnksP[n-1][1], rnksP[n][1]*sizes[n][1]*sizes[n][2]))
+            # Matrix factorization by svd 
+            F     = svd!(Matrix(P2')) 
+            r     = length(F.S)
+            sv2   = cumsum(reverse(F.S).^2)
+            tr    = Int(findfirst(sv2 .> δ^2))-1
+            if tr > 0
+                r     = length(F.S) - tr 
+            end
+            U = F.U[:,1:r]
+            S = Diagonal(F.S[1:r])
+            V = F.V[:,1:r]
+            rnksP[n][1] = minimum([r,rnksP[n][1]])
+            P[n]   = reshape(U',(rnks[n][1],sizes[n][1],sizes[n][1],rnks[n][2]))
+            P[n-1] = reshape(S*V,(rnks[n-1][1],sizes[n-1][1],sizes[n-1][1],rnks[n-1][2]))
+
+            Z1,Z2 = getZ(P[n],A[n])
+            r1    = Z1*r1
+            r2    = Z2*r2
+            R1[n-1] = reshape(r1,(rnksP[n][1],rnks[n][1],rnks[n][1],rnksP[n][1]))
+            R2[n-1] = reshape(r2,(rnksP[n][1],rnks[n][1]))
+        end
+    end
     return P
 end
 
