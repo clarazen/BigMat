@@ -166,7 +166,7 @@ function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
             Ā = getĀ(L1[n],A[n],A[n+1],R1[n+1])
             b̄ = getb̄(L2[n],A[n],A[n+1],R2[n+1])
             f(p) = p'*Ā*p - 2*p'*b̄ + 0.1*p'*p
-            res =  optimize(f,(Ptt[n]*Ptt[n+1])[:],LBFGS())
+            res =  optimize(f,(Ptt[n]*Ptt[n+1])[:],NGMRES())
             p2 = Optim.minimizer(res)
             P2 = reshape(p2,(rnksP[n][1]*sizes[n][1]*sizes[n][2], sizes[n+1][1]*sizes[n+1][2]*rnksP[n+2][1]))
             # Matrix factorization by svd 
@@ -190,14 +190,15 @@ function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
             L1[n+1] = reshape(l1t,(rnksP[n+1][1],rnks[n+1][1],rnks[n+1][1],rnksP[n+1][1]))
             L2[n+1] = reshape(l2t,(rnksP[n+1][1],rnks[n+1][1]))
         end
+        r1  = 1; r2  = 1;
         for n = N-1:-1:2
             # solve local optimization problem
-            Ā = getĀ(L1[n-1],A[n-1],A[n],R1[n])
-            b̄ = getb̄(L2[n-1],A[n-1],A[n],R2[n])
+            Ā    = getĀ(L1[n],A[n],A[n+1],R1[n+1])
+            b̄    = getb̄(L2[n],A[n],A[n+1],R2[n+1])
             f(p) = p'*Ā*p - 2*p'*b̄ + 0.1*p'*p
-            res  =  optimize(f,(Ptt[n-1]*Ptt[n])[:],LBFGS())
+            res  =  optimize(f,(Ptt[n]*Ptt[n+1])[:],NGMRES())
             p2   = Optim.minimizer(res)
-            P2   = reshape(p2,(sizes[n-1][1]*sizes[n-1][2]*rnksP[n-1][1], rnksP[n][1]*sizes[n][1]*sizes[n][2]))
+            P2   = reshape(p2,(rnksP[n][1]*sizes[n][1]*sizes[n][2], sizes[n+1][1]*sizes[n+1][2]*rnksP[n+1][2]))
             # Matrix factorization by svd 
             F     = svd!(Matrix(P2')) 
             r     = length(F.S)
@@ -210,14 +211,14 @@ function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
             S = Diagonal(F.S[1:r])
             V = F.V[:,1:r]
             rnksP[n][1] = minimum([r,rnksP[n][1]])
-            P[n]   = reshape(U',(rnks[n][1],sizes[n][1],sizes[n][1],rnks[n][2]))
-            P[n-1] = reshape(S*V,(rnks[n-1][1],sizes[n-1][1],sizes[n-1][1],rnks[n-1][2]))
+            P[n+1]   = reshape(U',(rnks[n+1][1],sizes[n+1][1],sizes[n+1][1],rnks[n+1][2]))
+            P[n] = reshape(V*S,(rnks[n][1],sizes[n][1],sizes[n][1],rnks[n][2]))
 
-            Z1,Z2 = getZ(P[n],A[n])
+            Z1,Z2 = getZ(P[n+1],A[n+1])
             r1    = Z1*r1
             r2    = Z2*r2
-            R1[n-1] = reshape(r1,(rnksP[n][1],rnks[n][1],rnks[n][1],rnksP[n][1]))
-            R2[n-1] = reshape(r2,(rnksP[n][1],rnks[n][1]))
+            R1[n] = reshape(r1,(rnksP[n][1],rnks[n][1],rnks[n][1],rnksP[n][1]))
+            R2[n] = reshape(r2,(rnksP[n][1],rnks[n][1]))
         end
     end
     return P
@@ -253,14 +254,14 @@ function getĀ(L::Array{Float64,4},A4::Array{Float64,4},B4::Array{Float64,4},R:
     tmp = contractmodes(L,A,[2 1])
     tmp = permutedims(tmp,[1 4 5 2 3])
     tmp = contractmodes(tmp,A,[4 1])
-    tmp = permutedims(tmp,[1 2 3 5 6 4 ])
+    tmp = permutedims(tmp,[1 2 3 5 6 4])
     tmp = contractmodes(tmp,B,[3 1])
     tmp = permutedims(tmp,[1 2 6 7 3 4 5])
-    tmp = contractmodes(tmp,B,[4 1])
+    tmp = contractmodes(tmp,B,[6 1])
     tmp = permutedims(tmp,[1 2 3 4 5 7 8 6])
     tmp = contractmodes(tmp,R,[4 2; 7 3])
-    tmp = permutedims(tmp,[1 2 3 7 8 4 5 6])
-    sz  = size(L,1)*size(A4,2)*size(A4,3)*size(B4,2)*size(B4,3)*size(R,1)
+    tmp = permutedims(tmp,[1 2 3 7 6 4 5 8])
+    sz  = size(L,1)*size(A,2)*size(B,2)*size(R,1)
     Ā   = reshape(tmp,(sz,sz))
     return Ā
 end
