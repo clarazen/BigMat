@@ -57,6 +57,7 @@
     norm(ABA-A*B*A')/norm(A*B*A')
 
     # test pseudo inverse
+    @run approxpseudoinverse(Attm,0.0,0.0)
     P = approxpseudoinverse(Attm,0.0,0.0)
     norm(inv(A) - mpo2mat(P))/norm(inv(A))
 
