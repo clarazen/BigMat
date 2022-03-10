@@ -3,12 +3,19 @@
     # vector to MPS
     v1      = [1.0; 4.5; 2; 7; 3; 7; 3.3; 10; 6; 8; 1.1; 4.6; 1; 6; 2; 7; 12; 4.5; 1; 0; 0; 3; 6; 2.1];
     v2      = [1.0; 4.5; 2; 7; 3; 7; 3.3; 10; 6; 8; 1.1; 4.6; 1; 6; 2; 7; 12; 4.5; 1; 0; 0; 3; 6; 2.1];
+    M1      = randn(64,64)
+    M2      = Symmetric(M1*M1')
     
     tt1,err = MPT_SVD(v1,[2 3 4],0.07);
-    tt2 = MPT_ALS(v2,[2 3 4],[1,2,4,1]);
+    tt2     = TT_ALS(v2,[2 3 4],[1,2,4,1]);
+    ttm1    = TTm_ALS(M1,[4 4 4; 4 4 4],[1,16,16,1]);
+    ttm2    = TTm_ALS(M2,[4 4 4; 4 4 4],[1,16,16,1])
+    ttm2    = TTm_ALS(Symmetric(M1*M1'),[4 4 4; 4 4 4],[1,3,3,1])
 
     @test (norm(tt1) - norm(tt2)) < 1e-13
     @test norm(mps2vec(tt1) - v1)/norm(v1) < 1e-13
+    @test norm(mpo2mat(ttm1) - M1)/norm(M1) < 1e-13
+    @test norm(mpo2mat(ttm2) - mpo2mat(ttm2)') < 1e-10
 
     # matrix to MPO 
     M1 = v1*v1';
