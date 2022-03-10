@@ -1,3 +1,7 @@
+# Comments:
+# ALS without orthog is really slow (probably getUTU needs to be optimized) 
+# and almost never used unless an initial tt is inputted which is not site-k
+
 # no initial tt, automatically with orthogonalization
 function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64})
     N     = ndims(tensor);
@@ -8,17 +12,12 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64})
         cores[i] = reshape(Matrix(tmp.Q),(rnks[i], sizes[i], rnks[i+1]));
     end
     cores[N] = reshape(rand(rnks[N]*sizes[N]),(rnks[N], sizes[N], 1));
-    tt = MPT(cores,N);
-    return TT_ALS(tensor,rnks,tt)
-end
-
-# with initial tt
-function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS)
-    return TT_ALS(tensor,rnks,tt,tt.normcore)
+    tt0 = MPT(cores,N);
+    return TT_ALS(tensor,tt0)
 end
 
 # with / without orthogonalization
-function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int64)
+function TT_ALS(tensor::Array{Float64},tt::MPS)
     maxiter = 10;
     N       = order(tt);
     rnks    = rank(tt);
@@ -33,15 +32,9 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int
                 UTy   = getUTy(tt,tensor,n);
                 tt[n] = reshape(inv(UTU)*UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
             else
-                swipe = [collect(tt.normcore:N)..., collect(N-1:-1:2)..., collect(1:tt.normcore-1)...];
+                swipe = [collect(N:-1:2)..., collect(1:N-1)...];
+                Dir   = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
                 n     = swipe[k];
-                if tt.normcore == 1
-                    Dir = Int.([ones(1,N-1)..., -ones(1,N-1)...]); 
-                elseif tt.normcore == N
-                    Dir = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
-                else
-                    Dir = Int.([ones(1,N-tt.normcore)...,-ones(1,N-1)...,ones(1,tt.normcore-1)...]);
-                end
                 UTy   = getUTy(tt,tensor,n);
                 tt[n] = reshape(UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
                 shiftMPTnorm(tt,n,Dir[k])
@@ -51,6 +44,18 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64},tt::MPS,normcore::Int
     return tt
 end
 
+# TT-ALS for a vector without initial tt
+function TT_ALS(vector::Vector{Float64},middlesizes::Matrix{Int64},rnks::Vector{Int64})
+    tensor = reshape(vector,Tuple(middlesizes));
+    return TT_ALS(tensor,rnks);
+end
+
+
+# TT-ALS for vector with initial TT
+function TT_ALS(vector::Vector{Float64},tt0::MPT)
+    tensor = reshape(vector,Tuple([size(tt0)[i][1] for i = 1:order(tt0)]));
+    return TT_ALS(tensor,tt0);  
+end
 
 
 ##########################################
