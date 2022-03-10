@@ -39,8 +39,8 @@ end
 function TT_SVD(tensor::Array{Float64},d::Int,ϵ::Float64)
     ########################################################################    
     # for a symmetric matrix
-        cores = Vector{Array{Float64,3}}(undef,d);
-        S     = zeros(2)
+        cores    = Vector{Array{Float64,3}}(undef,d);
+        S        = zeros(2)
         frobnorm = norm(tensor); 
     
         δ     = ϵ / sqrt(d-1) * frobnorm;
