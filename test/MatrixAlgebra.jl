@@ -61,4 +61,15 @@
     P = approxpseudoinverse(Attm,0.0,0.0)
     norm(inv(A) - mpo2mat(P))/norm(inv(A))
 
+    # test vectorbymatrix
+    A = randn(8,2)
+    Attm,err = MPT_SVD(A,[2 2 2;1 1 2],0.0)
+    b = randn(8)
+    btt,err = MPT_SVD(b,[2 2 2],0.0)
+    norm(vectorbymatrix(Attm,btt) - b'*A)/norm(b'*A)
+
+    # test matrixbyvector
+    matrixbyvector(Attm,btt)
+    norm(matrixbyvector(Attm,btt) - A'*b)/norm(A'*b)  
+
 #end
