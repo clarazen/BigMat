@@ -96,6 +96,24 @@
         permutedims(tensor,[collect(2:n)..., 1, collect(n+1:ndims(tensor))...]) 
     end
 
+    function vectorbymatrix(A::MPT{4},b::MPT{3})
+        d = order(A)
+        vec = contractcores(b[1],A[1])[1,:,:]
+        for i = 2:d-1
+            vec = vec * contractcores(b[i],A[i])[:,1,:]
+        end
+        return vec = vec * contractcores(b[d],A[d])[:,:,1]
+    end
+
+    function matrixbyvector(A::MPT{4},b::MPT{3})
+        d = order(A)
+        vec = contractcores(b[1],A[1])[1,:,:]
+        for i = 2:d-1
+            vec = vec * contractcores(b[i],A[i])[:,1,:]
+        end
+        return vec = (vec * contractcores(b[d],A[d])[:,:,1])'
+    end
+
     # computation of vector represented by an MPS
     function mps2vec(mps::MPT{3})
         tensor = unfold(mps[1],[3],"right");
