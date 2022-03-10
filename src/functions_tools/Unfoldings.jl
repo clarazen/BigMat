@@ -32,7 +32,7 @@
         for i = 1:order(mpo)
             cores[i] = reshape(mpo[i],(rnks[i][1], sizes[i][1]*sizes[i][2], rnks[i][2]));
         end
-        MPT(cores);
+        MPT(cores,mpo.normcore);
     end
 
     # dividing middlesizes from mps to get an mpo
@@ -42,7 +42,7 @@
         for i = 1:order(mps)
             cores[i] = reshape(mps[i],(rnks[i][1], middlesizes[1,i], middlesizes[2,i], rnks[i][2]));
         end
-        MPT(cores);
+        MPT(cores,mps.normcore)
     end
 
     function mps2mpo(mps::MPS,middlesizes::Vector{Tuple{Int64, Int64}})
@@ -51,5 +51,5 @@
         for i = 1:order(mps)
             cores[i] = reshape(mps[i],(rnks[i][1], middlesizes[i][1], middlesizes[i][2], rnks[i][2]));
         end
-        MPT(cores);
+        MPT(cores,mps.normcore)
     end
