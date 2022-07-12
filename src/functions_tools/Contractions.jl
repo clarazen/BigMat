@@ -96,6 +96,11 @@
         permutedims(tensor,[collect(2:n)..., 1, collect(n+1:ndims(tensor))...]) 
     end
 
+    function nmodeproduct(vector::Vector,tensor::Array,n::Int64)
+        tensor = contractmodes(reshape(vector,(1,length(vector))),tensor,[2 n]); # contract mode n and leave all other modes free
+        permutedims(tensor,[collect(2:n)..., 1, collect(n+1:ndims(tensor))...])
+    end
+
     function vectorbymatrix(A::MPT{4},b::MPT{3})
         d = order(A)
         vec = contractcores(b[1],A[1])[1,:,:]
@@ -122,7 +127,7 @@
             tensor = reshape(tensor, (Int(length(tensor)/size(mps[i],3)), size(mps[i],3)));
         end
         vector = tensor;
-        return vector;
+        return vector
     end
 
     # computation of matrix represented by an MPO
