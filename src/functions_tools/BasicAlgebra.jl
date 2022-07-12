@@ -72,6 +72,15 @@
         MPT(cores)
     end
 
+    function *(mpo1::MPT{4},mpo2::MPT{4},ϵ)
+        N = order(mpo1);
+        cores = Vector{Array{Float64,4}}(undef,N);
+        for i = 1:N
+            cores[i] = contractcores(mpo1[i],mpo2[i]);
+        end
+        MPT(cores)
+    end
+
     # vector by matrix product !! check if it zip line
     function *(mps::MPT{3},mpo::MPT{4})
         N = order(mpo);
@@ -92,6 +101,16 @@
         return c[1]
     end
 
+    # mpo times vector
+    function *(mpo::MPT{4},a::Vector)
+        D      = order(mpo)
+        mps    = mpo2mps(mpo)
+        tmp    = nmodeproduct(a,mpo[D],3)
+        mps[D] = reshape(tmp,(size(tmp,1),size(tmp,2),size(tmp,3)))
+
+        return mps
+    end
+
     function outerprod(tt1::MPT{3},tt2::MPT{3})
         N     = order(tt1);
         cores = Vector{Array{Float64,4}}(undef,N);
@@ -102,7 +121,7 @@
         for i = 1:N
             g1  = reshape(tt1[i],(length(tt1[i]), 1));
             g2  = reshape(tt2[i],(length(tt2[i]), 1));
-            tmp = kron(g1,g2);
+            tmp = kron(g2,g1);
             tmp = reshape(tmp,(r1[i][1], s1[i][1], r1[i][2], r2[i][1], s2[i][1], r2[i][2]));
             tmp = permutedims(tmp,[1 4 2 5 3 6]);
             tmp = reshape(tmp,(r1[i][1]*r2[i][1], s1[i][1], s2[i][1], r1[i][2]*r2[i][2]));
@@ -111,10 +130,36 @@
         return MPT(cores);
     end
 
+    function outerprod(ttm1::MPT{4},ttm2::MPT{4})
+        tt1     = mpo2mps(ttm1)
+        tt2     = mpo2mps(ttm2)
+        outertt = outerprod(tt1,tt2)
+        D       = order(ttm1)
+        cores   = Vector{Array{Float64,4}}(undef,D)
+        sz1     = size(ttm1,true)
+        sz2     = size(ttm2,true)
+        rk1     = rank(ttm1,true)
+        rk2     = rank(ttm2,true)
+        for d = 1:D
+            newsize  = (rk1[d]*rk2[d],sz1[1,d],sz1[2,d],sz2[1,d],sz2[2,d],rk1[d+1]*rk2[d+1])
+            tmp      = reshape(outertt[d],newsize)
+            tmp      = permutedims(tmp,[1 2 4 3 5 6])
+            newsize  = (rk1[d]*rk2[d],sz1[1,d]*sz2[1,d],sz1[2,d]*sz2[2,d],rk1[d+1]*rk2[d+1])
+            cores[d] = reshape(tmp,newsize)
+        end
+        return MPT(cores)
+    end
+
     function *(core1::Array{Float64,3},core2::Array{Float64,3})
         size1 = size(core1);
         size2 = size(core2);
         reshape(unfold(core1,[3],"right")*unfold(core2,[1],"left"),(size1[1],size1[2]*size2[2], size2[3]))
+    end
+
+    function *(core1::Array{Float64,4},core2::Array{Float64,4})
+        s1 = size(core1);
+        s2 = size(core2);
+        reshape(unfold(core1,[4],"right")*unfold(core2,[1],"left"),(s1[1],s1[2]*s1[3]*s2[2]*s2[3], s2[4]))
     end
 
     function *(cores::Vector{Array{Float64,3}})
@@ -139,19 +184,19 @@
         return MPT(cores)
     end
 
-    function KathriRao(A::Matrix{Float64},B::Matrix{Float64},dims::Int64)
-            if dims == 1
-                C = zeros(size(A,1),size(A,2)*size(B,2));
-                @inbounds @simd for i = 1:size(A,1)
-                    @views kron!(C[i,:],A[i,:],B[i,:])
-                end
-            elseif dims == 2
-                C = zeros(size(A,1)*size(B,1),size(A,2));
-                @inbounds @simd for i = 1:size(A,2)
-                    @views kron!(C[:,i],A[:,i],B[:,i])
-                end
+    function KhatriRao(A::Matrix{Float64},B::Matrix{Float64},dims::Int64)
+        if dims == 1
+            C = zeros(size(A,1),size(A,2)*size(B,2));
+            @inbounds @simd for i = 1:size(A,1)
+                @views kron!(C[i,:],A[i,:],B[i,:])
             end
-        
-            return C
+        elseif dims == 2
+            C = zeros(size(A,1)*size(B,1),size(A,2));
+            @inbounds @simd for i = 1:size(A,2)
+                @views kron!(C[:,i],A[:,i],B[:,i])
+            end
+        end
+
+        return C
     end
 
