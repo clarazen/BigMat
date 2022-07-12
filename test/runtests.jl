@@ -6,6 +6,7 @@ using Test
 using Random
 using LinearAlgebra
 using Optim
+using SparseArrays
 
 
 @testset "BigMat.jl" begin
