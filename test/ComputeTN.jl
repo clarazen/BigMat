@@ -35,19 +35,33 @@
     # maxiter + residulas need to be implemented
 
     # test of rktp2tn
-    Ũ = [rand(50,40),rand(50,40),rand(50,40)];
-    ϵ = 1.0;
+    #Ũ = [rand(50,40),rand(50,40),rand(50,40)];
+    Ũ = [Float64.(Matrix(I,4,4)),Float64.(Matrix(I,4,4)),Float64.(Matrix(I,4,4))];
+    ϵ = 0.001;
     Umpo,err2 = rkrp2tn(Ũ,ϵ);
-    Uapprox = mpo2mat(Umpo);
-    U12 = zeros(2500,40);
-    @inbounds @simd for j = 1:40
+    Uapprox   = mpo2mat(Umpo)
+    U12       = zeros(size(Ũ[1],1)^2,size(Ũ[1],2));
+    @inbounds @simd for j = 1:size(Ũ[1],2)
         @views kron!(U12[:,j],Ũ[1][:,j],Ũ[2][:,j])
     end
-    Utrue = zeros(2500*50,40);
-    @inbounds @simd for j = 1:40
+    Utrue = zeros(size(Ũ[1],1)^3,size(Ũ[1],2));
+    @inbounds @simd for j = 1:size(Ũ[1],2)
         @views kron!(Utrue[:,j],U12[:,j],Ũ[3][:,j])
     end
     @test norm(Utrue-Uapprox)/norm(Utrue) < ϵ
+
+    # for 2 matrices with sparse matrices 
+    Ũ = [sparse(Int.(Matrix(I,4,4))),sparse(Int.(Matrix(I,4,4)))];
+    ϵ = 0.0;
+    @run rkrp2tn(Ũ,ϵ)
+    Umpo,err2 = rkrp2tn(Ũ,ϵ);
+    Uapprox   = mpo2mat(Umpo)
+    Utrue     = zeros(size(Ũ[1],1)^2,size(Ũ[1],2));
+    @inbounds @simd for j = 1:size(Ũ[1],2)
+        @views kron!(Utrue[:,j],Ũ[1][:,j],Ũ[2][:,j])
+    end
+    @test norm(Utrue-Uapprox)/norm(Utrue) <= ϵ
+
 
     # get matrix entry from mpo2mat
     Ktest = zeros(24,24);
@@ -85,7 +99,17 @@
     U = mpo2mat(Uttm)
     norm(U*Diagonal(S)*U'-K)/norm(K)
 
-    # test Hierarchical Tucker function
+    # test block TTm
+    blocks = [[1 2; 3 4],[7 7; 6 1],[1 2; 5 5.0],[5 3; 7 4]];
+    blocklocations = [1 2; 2 2; 3 4; 4 1];
+    middleindices = [2 2 2; 2 2 2];
+    maxrank = 5;
+    acc = 1e-10;
+    Kmpo = sparseblockTTm(blocks,blocklocations,middleindices,maxrank,acc)
+    K    = sparse(mpo2mat(Kmpo));
+    print(K)
+
+    # test Hierarchical Tucker function (does not work yet)
     tensor = rand(5,5,5);
     ranks  = [2,2,2];
     @run leaves2roottrunc(tensor,ranks)
