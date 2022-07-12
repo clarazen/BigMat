@@ -54,8 +54,9 @@ end
 # ALS for diagonal matrices
 function TTm_ALS(diag::Vector,middlesizes::Matrix,rnks::Vector)
     d      = length(rnks)-1
-    tensor = reshape(diag,Tuple(middlesizes))
+    tensor = reshape(diag,Tuple(middlesizes[1,:]))
     tt     = TT_ALS(tensor,rnks)
+    N      = size(middlesizes,2)
     cores  = Vector{Array{Float64,4}}(undef,N)
     for i = 1:N
         cores[i] = zeros(rnks[i],middlesizes[i],middlesizes[i],rnks[i+1])
