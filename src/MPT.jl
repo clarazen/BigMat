@@ -19,6 +19,17 @@
         [sizes[i][2:end-1] for i in 1:length(sizes)]
     end
 
+    function Base.size(tt::MPT{3},s::Bool)
+        [size(core)[2] for core in tt.cores];
+    end
+
+    function Base.size(ttm::MPT{4},s::Bool)
+        middlesizes = zeros(2,order(ttm))
+        middlesizes[1,:] = [size(core)[2] for core in ttm.cores]
+        middlesizes[2,:] = [size(core)[3] for core in ttm.cores]
+        Int.(middlesizes)
+    end
+
     # number of cores 
     function order(mpt::MPT)
         collect(size(mpt.cores))[1]
@@ -34,6 +45,11 @@
     function LinearAlgebra.rank(mpt::MPT)
         sizes = [size(core) for core in mpt.cores];
         [[sizes[i][1], sizes[i][end]] for i in 1:length(sizes)]    
+    end
+
+    function LinearAlgebra.rank(mpt::MPT,s::Bool)
+        sizes = [size(core) for core in mpt.cores];
+        [[sizes[i][1] for i in 1:length(sizes)]..., 1]    
     end
 
     function LinearAlgebra.norm(mps::MPS)
