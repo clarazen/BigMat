@@ -1,14 +1,17 @@
 module BigMat
 
-using LinearAlgebra, Base, Random, Optim
+using LinearAlgebra, Base, Random, SparseArrays
     import LinearAlgebra: norm
 
     # functions that are available for the user
     export MPT, size, order, length, rank, norm,
            getelement, getrow, getcol, outerprod,
            MPT_SVD, TTm_ALS, TT_ALS, eye, rkrp2tn,
+           sparseblockTTm, ALS_krtt, BayALS_krtt,
            mps2vec, mpo2mat,
-           KathriRao, transpose, roundTT, 
+           KhatriRao, transpose, roundTT, 
+           krtimesttm,
+           nmodeproduct, contractmodes,
            mpo2mps, mps2mpo,
            unfold, diag, matrixbyvector, vectorbymatrix,
            TNrSVD,
@@ -23,6 +26,9 @@ using LinearAlgebra, Base, Random, Optim
     include("functions_computeTN/TTm_ALS.jl")
     include("functions_computeTN/eyeMPO.jl")
     include("functions_computeTN/rkrp2tn.jl")
+    include("functions_computeTN/sparseblockTTm.jl")
+    include("functions_computeTN/ALS_krtt.jl")
+    include("functions_computeTN/BayALS_krtt.jl")
 
     include("functions_tools/BasicAlgebra.jl")
     include("functions_tools/Contractions.jl")
