@@ -16,6 +16,18 @@ function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64})
     return TT_ALS(tensor,tt0)
 end
 
+function TT_ALS(vector::SparseVector{Float64, Int64},sizes::Vector,rnks::Vector{Int64})
+    D     = length(sizes);
+    cores = Vector{Array{Float64,3}}(undef,D);
+    for i = 1:D-1 # creating site-N canonical initial tensor train
+        tmp = qr(rand(rnks[i]*sizes[i], rnks[i+1]));
+        cores[i] = reshape(Matrix(tmp.Q),(rnks[i], sizes[i], rnks[i+1]));
+    end
+    cores[D] = reshape(rand(rnks[D]*sizes[D]),(rnks[D], sizes[D], 1));
+    tt0 = MPT(cores,D);
+    return TT_ALS(vector,sizes,tt0)
+end
+
 # with / without orthogonalization
 function TT_ALS(tensor::Array{Float64},tt::MPS)
     maxiter = 10;
@@ -36,6 +48,34 @@ function TT_ALS(tensor::Array{Float64},tt::MPS)
                 Dir   = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
                 n     = swipe[k];
                 UTy   = getUTy(tt,tensor,n);
+                tt[n] = reshape(UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
+                shiftMPTnorm(tt,n,Dir[k])
+            end
+        end
+    end
+    return tt
+end
+
+# with / without orthogonalization
+function TT_ALS(vector::SparseVector{Float64, Int64},sz::Vector{Int},tt::MPS)
+    maxiter = 10;
+    N       = order(tt);
+    rnks    = rank(tt);
+    sizes   = size(tt);
+
+    for i = 1:maxiter
+        for k = 1:2N-2
+            if tt.normcore == 0
+                swipe = [collect(1:N)..., collect(N-1:-1:2)...];
+                n     = swipe[k];
+                UTU   = getUTU(tt,n);
+                UTy   = getUTy(tt,vector,sz,n);
+                tt[n] = reshape(inv(UTU)*UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
+            else
+                swipe = [collect(N:-1:2)..., collect(1:N-1)...];
+                Dir   = Int.([-ones(1,N-1)...,ones(1,N-1)...]);
+                n     = swipe[k];
+                UTy   = getUTy(tt,vector,sz,n);
                 tt[n] = reshape(UTy,(rnks[n][1],sizes[n][1],rnks[n][2]));
                 shiftMPTnorm(tt,n,Dir[k])
             end
@@ -76,6 +116,28 @@ function getUTy(tt::MPS,tensor::Array{Float64},n::Int64)
         Gleft, Gright = supercores(tt,n);
         newsizes1     = (prod(sizes[1:n-1]), prod(sizes[n:N]));
         tmp           = Gleft*reshape(tensor,newsizes1);
+        newsizes2     = (rnks[n][1]*sizes[n], prod(sizes[n+1:N]));
+        UTy           = reshape(tmp,newsizes2)*Gright;
+    end
+    return UTy[:]
+end
+
+function getUTy(tt::MPS,vector::SparseVector{Float64, Int64},sz::Vector{Int},n::Int64)
+    N     = order(tt);
+    sizes = sz
+    rnks  = rank(tt);
+    if n == N 
+        Gleft    = supercores(tt,N);
+        newsizes = (prod(sizes[1:N-1]), sizes[N]);
+        UTy      = Gleft*reshape(vector,Tuple(newsizes));
+    elseif n == 1
+        Gright   = supercores(tt,1);
+        newsizes = (sizes[1], prod(sizes[2:N]));
+        UTy      = reshape(vector,Tuple(newsizes))*Gright;
+    else
+        Gleft, Gright = supercores(tt,n);
+        newsizes1     = (prod(sizes[1:n-1]), prod(sizes[n:N]));
+        tmp           = Gleft*reshape(vector,newsizes1);
         newsizes2     = (rnks[n][1]*sizes[n], prod(sizes[n+1:N]));
         UTy           = reshape(tmp,newsizes2)*Gright;
     end
