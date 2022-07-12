@@ -5,8 +5,10 @@
     A = rand(64,64);
     A = A*A'/2;
     b = rand(64,1);
-        
+    c = rand(64,1);
     mps,err = MPT_SVD(b,[4 4 4],0.0);
+    mps_2,err = MPT_SVD(c,[4 4 4],0.0);
+
     mpo,err = MPT_SVD(A,[4 4 4; 4 4 4],0.0)
     mpo\mps
     @test norm(mps2vec(mpo\mps)-A\b)/norm(A\b) < 1e-5
@@ -56,7 +58,7 @@
     ABA = AB*transpose(Attm)
     norm(ABA-A*B*A')/norm(A*B*A')
 
-    # test pseudo inverse
+    # test pseudo inverse (I think does not work yet)
     @run approxpseudoinverse(Attm,0.0,0.0)
     P = approxpseudoinverse(Attm,0.0,0.0)
     norm(inv(A) - mpo2mat(P))/norm(inv(A))
@@ -72,4 +74,67 @@
     matrixbyvector(Attm,btt)
     norm(matrixbyvector(Attm,btt) - A'*b)/norm(A'*b)  
 
+    # test krtimesttm: for ALS
+    # compile this first
+    function getU(tt::MPT{3},d::Int)
+        D           = order(tt)
+        middlesizes = size(tt,true)
+        M           = middlesizes[d]
+        newms       = zeros(2,D)
+        newms[1,:]  = middlesizes
+        newms[2,:]  = ones(D)
+        ttm         = mps2mpo(tt,Int.(newms))
+        ttm[d]      = reshape(Matrix(I,(M,M)),(1,M,M,1))
+        if d>1
+            ttm[d-1] = permutedims(ttm[d-1],(1,2,4,3))
+        end
+        if d<D
+            ttm[d+1] = permutedims(ttm[d+1],(3,2,1,4))
+        end
+    
+        return ttm
+    end
+
+    kr = Vector{Matrix{Float64}}(undef,4)
+    kr[1] = randn(100,4)
+    kr[2] = randn(100,4)
+    kr[3] = randn(100,4)
+    kr[4] = randn(100,4)
+    Kr    = zeros(100,64*4)
+    for n = 1:100
+        Kr[n,:] = kron(kron(kron(kr[4][n,:],kr[3][n,:]),kr[2][n,:]),kr[1][n,:])
+    end
+    b = rand(256,1);
+    mps,err = MPT_SVD(b,[4 4 4 4],0.0);
+    mps_ = transpose(getU(mps,4))
+    test = mps[4][:]'*krtimesttm(kr,mps_)
+    ref  = Kr*b
+    
+    norm(test-ref')/norm(ref')
+
 #end
+
+
+# test matrix inverse where result is matrix
+coresK = Vector{Array{Float64,4}}(undef,3)
+for i = 1:3
+    K = rand(2,2); K = K*K'
+    coresK[i] = reshape(K,(1,2,2,1))
+end
+Kttm = MPT(coresK);
+Ittm = eye([2 2 2;2 2 2]);
+
+S        = randn(8,8); S = S*S';
+Sttm,err = MPT_SVD(S,[2 2 2; 2 2 2],1e-15);
+
+X    = mpo2mat(\(Sttm,Kttm,[1,4,4,1]))
+norm(S\mpo2mat(Kttm)-X)
+##############
+
+Attm,err = MPT_SVD(randn(64,64),[4 4 4 ; 4 4 4],0.0)
+Bttm     = TT_ALS(randn(4,4,4),[1,1,1,1])
+X        = mpo2mat(Attm)\mps2vec(Bttm)
+Xtest    = mps2vec(\(Attm,Bttm,[1,4,4,1]))
+
+norm(X-Xtest)/norm(X)
+
