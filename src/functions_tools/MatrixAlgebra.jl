@@ -3,8 +3,47 @@ import LinearAlgebra: diag
 
     function \(A::MPO,b::Vector)
         middleind = Matrix(reduce(vcat,transpose.(collect.(size(A))))[:,1]');
-        btt,err = MPT_SVD(b,middleind,0.0);
+        btt,err   = MPT_SVD(b,middleind,0.0);
         return A\btt
+    end
+
+    function \(A::MPO,B::MPO,rnks::Vector)
+        Ittm = eye([size(B,true)[2,:]'; size(B,true)[2,:]'])
+        tmp  = \(outerprod(A,Ittm),mpo2mps(B),rnks)
+        return mps2mpo(tmp,[size(A,true)[1,:]';size(B,true)[2,:]'])
+    end
+
+    function \(A::MPO,b::MPS,rnks::Vector)
+        N     = order(b);
+        cores = Vector{Array{Float64,3}}(undef,N);
+        maxiter = 10;
+        # creating site-N canonical initial tensor train
+        for i = 1:N-1 
+            tmp = qr(rand(rnks[i]*size(b[i],2), rnks[i+1]));
+            cores[i] = reshape(Matrix(tmp.Q),(rnks[i],size(b[i],2),rnks[i+1]));
+        end
+        cores[N] = reshape(rand(rnks[N]*size(b[N],2)),(rnks[N], size(b[N],2), 1));
+        x = MPT(cores);
+
+        for iter = 1:maxiter
+            if N == 2
+                swipe = [1, 2];
+            else
+                swipe = [collect(1:N)... collect(N-1:2)...];
+            end
+            Dir   = Int.([ones(1,N-1) -ones(1,N-1)]);
+            for k = 1:length(swipe)
+                n    = swipe[k];
+                dir  = Dir[k];
+                
+                An   = createAn(A,x,n);
+                bn   = createbn(b,x,n);
+                x[n] = reshape(An\bn,size(x[n]));
+                
+                shiftMPTnorm(x,n,dir);       
+            end
+        end
+        return x
     end
     
     function \(A::MPO,b::MPS)
@@ -36,7 +75,11 @@ import LinearAlgebra: diag
         x = MPT(cores);
 
         for iter = 1:maxiter
-            swipe = [collect(1:N)... collect(N-1:2)...];
+            if N == 2
+                swipe = [1, 2];
+            else
+                swipe = [collect(1:N)... collect(N-1:2)...];
+            end
             Dir   = Int.([ones(1,N-1) -ones(1,N-1)]);
             for k = 1:length(swipe)
                 n    = swipe[k];
@@ -117,12 +160,15 @@ import LinearAlgebra: diag
         end
 
         if n < N
-            bn = reshape(bn,(rnksx[n][1])*sizeb[n][1], rnksx[n][2]) * reshape(right,(rnksx[n+1][1], rnksb[n+1][1]))';
+           bn = reshape(bn,(rnksx[n][1])*sizeb[n][1], rnksb[n][2]) * reshape(right,(rnksx[n+1][1], rnksb[n+1][1]))';
         end
 
-        bn = reshape(bn,(rnksx[n][1]*sizeb[n][1]*rnksb[n][2]));
+        return bn[:]
     end
 ##############################################################################
+
+
+
 
 function approxpseudoinverse(A::MPT{4},ϵ::Float64,δ::Float64)
     # Algorithm 1 from Lee et al: Regularized computation of approximate pseudoinverse ...
@@ -309,3 +355,90 @@ function diag(ttm::MPT{4})
     return MPT(cores)
 end
 
+function krtimesttm(kr::Vector{Matrix},ttm::MPT{4},ϵ::Float64)
+    # computes the produt of two matrices, where the first one (kr) has a 
+    # row-wise Khatri-Rao structure and the second (ttm) is a TTm. 
+    # The trucation parameter ϵ is for rounding step
+
+    D        = order(ttm)
+    N        = size(kr[1],1)
+    cores    = Vector{Array{Float64,4}}(undef,D)
+    cores[1] = nmodeproduct(kr[1],ttm[1],3)
+    for d = 2:D 
+        Md2  = size(ttm[d-1],3) 
+        Md1  = size(ttm[d-1],2) 
+        Mdd2 = size(ttm[d],3)
+        Mdd1 = size(ttm[d],2)
+        Rd   = size(cores[d-1],1)
+        Rdd  = size(cores[d-1],4)
+        Rddd = size(ttm[d],4)
+        
+        tmp = KhatriRao(unfold(cores[d-1],[3],"right"),Matrix(kr[d]'),2)
+        Tmp = reshape(tmp,(Mdd2,Rd,Md1,Rdd,N))
+        Tmp = permutedims(Tmp,[2,3,5,4,1])
+        Tmp = contractmodes(Tmp,ttm[d],[4 1; 5 3])
+        tmp = reshape(Tmp,(Rd*Md1,N*Mdd1*Rddd))
+
+        # rounding the rank
+        F    = svd!(tmp); 
+        R    = length(F.S);
+        err2 = 0;
+        sv2  = cumsum(reverse(F.S).^2);
+        tr   = Int(findfirst(sv2 .> ϵ^2))-1;
+        if tr > 0
+            R = length(F.S) - tr;
+            err2 += sv2[tr];
+        end
+
+        cores[d-1] = reshape(F.U[:,1:R],(Rd,Md1,1,R))
+        cores[d]   = permutedims(reshape(Diagonal(F.S[1:R])*F.Vt[1:R,:],(R,N,Mdd1,Rddd)),[1,3,2,4])
+    end
+    return MPT(cores)
+end
+
+function krtimesttm(kr::Vector{Matrix},ttm::MPT{4})
+    # computes the produt of two matrices, where the first one (kr) has a 
+    # row-wise Khatri-Rao structure and the second (ttm) is a TTm. 
+
+    D  = order(ttm)
+    N  = size(kr[1],1)
+    
+    Tmp     = nmodeproduct(kr[1],ttm[1][1,:,:,:],2)
+    tmp     = KhatriRao(unfold(Tmp,[2],"right"),Matrix(kr[2]'),2)
+    newdims = (size(ttm[2],3),size(ttm[1],2),size(ttm[1],4),N)
+    Tmp     = reshape(tmp,newdims)
+    Tmp     = contractmodes(Tmp,ttm[2],[1 3; 3 1])
+
+    for d = 2:D-1     
+        tmp     = KhatriRao(unfold(Tmp,[d],"right"),Matrix(kr[d+1]'),2)
+        newdims = (size(ttm[d+1],3),newdims[2:d]...,size(ttm[d],2),size(ttm[d],4),N)
+        Tmp     = reshape(tmp,newdims)
+        Tmp     = contractmodes(Tmp,ttm[d+1],[1 3; d+2 1])  
+    end
+    return unfold(Tmp,[D],"right")
+end
+
+# only for testing, do not use in practice
+function krtimesrank1(W::Vector{Matrix},K::Vector{Matrix})
+    D      = size(W,1)
+    N      = size(W[1],1)
+    M      = size(K[1],1)
+
+    coresW = Vector{Array{Float64,4}}(undef,D)
+    coresK = Vector{Array{Float64,4}}(undef,D)
+
+    coresW[1] = reshape(W[1]',(1,1,M,N))
+    for d = 2:D
+        coresW[d] = zeros(N,1,M,N)
+        for m = 1:M
+            coresW[d][:,1,m,:] = Diagonal(W[d][:,m])
+        end
+    end
+
+    coresW[D] = permutedims(coresW[D],[1,4,3,2])
+    for d = 1:D
+        coresK[d] = reshape(K[d],(1,M,M,1))
+    end
+
+    return MPT(coresW)*MPT(coresK)
+end
