@@ -135,6 +135,17 @@ Attm,err = MPT_SVD(randn(64,64),[4 4 4 ; 4 4 4],0.0)
 Bttm     = TT_ALS(randn(4,4,4),[1,1,1,1])
 X        = mpo2mat(Attm)\mps2vec(Bttm)
 Xtest    = mps2vec(\(Attm,Bttm,[1,4,4,1]))
-
 norm(X-Xtest)/norm(X)
+
+# test with amen
+using MATLAB
+mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox')"
+mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/solve')"
+mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/core')"
+sol = mpo2mat(\(Sttm,Kttm,0.01))
+sol2 = mpo2mat(\(Sttm,Kttm,[1,4,4,1]))
+ref = mpo2mat(Sttm)\mpo2mat(Kttm)
+norm(sol-ref)/norm(ref)
+norm(sol2-ref)/norm(ref)
+
 
