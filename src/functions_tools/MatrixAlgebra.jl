@@ -7,9 +7,70 @@ import LinearAlgebra: diag
         return A\btt
     end
 
+    function \(A::MPO,B::MPO,eps::Float64)
+        Ittm = eye([size(B,true)[2,:]'; size(B,true)[2,:]'])
+        A_j  = outerprod(A,Ittm)
+        b_j  = mpo2mps(B)
+        D    = Float64(order(A))
+        cores_A = Float64[]
+        cores_b = Float64[]
+        for d = 1:order(A)
+            append!(cores_A,A_j[d][:])
+            append!(cores_b,b_j[d][:])
+        end
+        rnksA = rank(A_j,true)
+        rnksb = rank(b_j,true)
+        sizeA = Float64.(size(A_j,true)[1,:] .* size(A_j,true)[2,:])
+        sizeA1 = size(A_j,true)[1,:]
+        sizeA2 = size(A_j,true)[2,:]
+        sizeb = Float64.(size(b_j,true))
+        scA   = cumsum([1, length(A_j)[1]...])
+        scb   = cumsum([1, length(b_j)[1]...])
+        # make A_j in tt-toolbox format
+        mat"Att      = tt_tensor();"
+        mat"Att.d    = $D;"
+        mat"Att.r    = $rnksA;"
+        mat"Att.n    = $sizeA;"
+        mat"Att.core = $cores_A;"
+        mat"Att.ps   = $scA;"
+        mat"Attm     = tt_matrix(Att,$sizeA1,$sizeA2)"
+        # make b_j in tt-toolbox format
+        mat"btt      = tt_tensor();"
+        mat"btt.d    = $D;"
+        mat"btt.r    = $rnksb;"
+        mat"btt.n    = $sizeb;"
+        mat"btt.core = $cores_b;"
+        mat"btt.ps   = $scb;"
+        
+        mat"sol_tt  = amen_solve2(Attm, btt, $eps);"
+        mat"sol_ttm = tt_matrix(sol_tt)"
+
+        mat"vecsol  = sol_ttm.core"
+        mat"rnkssol = sol_ttm.r"
+        mat"sz1sol = sol_ttm.n"
+        mat"sz2sol = sol_ttm.m"
+        mat"scsol  = sol_ttm.ps"
+
+        vecsol = @mget vecsol
+        r      = Int.(@mget rnkssol)
+        sz1    = Int.(@mget sz1sol)
+        sz2    = Int.(@mget sz2sol)
+        sc     = Int.(@mget scsol)
+
+        D = Int.(D)
+        cores = Vector{Array{Float64,4}}(undef,D)
+        for i = 1:D
+            cores[i] = reshape(vecsol[sc[i]:sc[i+1]-1],r[i],sz1[i],sz2[i],r[i+1])
+        end
+        
+        return MPT(cores)
+    end
+
     function \(A::MPO,B::MPO,rnks::Vector)
         Ittm = eye([size(B,true)[2,:]'; size(B,true)[2,:]'])
-        tmp  = \(outerprod(A,Ittm),mpo2mps(B),rnks)
+        A_ = outerprod(A,Ittm)
+        b  = mpo2mps(B)
+        tmp  = \(A_,b,rnks)
         return mps2mpo(tmp,[size(A,true)[1,:]';size(B,true)[2,:]'])
     end
 
