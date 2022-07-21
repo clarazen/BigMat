@@ -95,22 +95,25 @@
         return ttm
     end
 
-    kr = Vector{Matrix{Float64}}(undef,4)
-    kr[1] = randn(100,4)
-    kr[2] = randn(100,4)
-    kr[3] = randn(100,4)
-    kr[4] = randn(100,4)
-    Kr    = zeros(100,64*4)
+    Φ    = Vector{Matrix}(undef,4)
+    Φ[1] = randn(100,4)
+    Φ[2] = randn(100,4)
+    Φ[3] = randn(100,4)
+    Φ[4] = randn(100,4)
+    Φmat    = zeros(100,64*4)
     for n = 1:100
-        Kr[n,:] = kron(kron(kron(kr[4][n,:],kr[3][n,:]),kr[2][n,:]),kr[1][n,:])
+        Φmat[n,:] = kron(kron(kron(Φ[4][n,:],Φ[3][n,:]),Φ[2][n,:]),Φ[1][n,:])
     end
-    b = rand(256,1);
-    mps,err = MPT_SVD(b,[4 4 4 4],0.0);
-    mps_ = transpose(getU(mps,4))
-    test = mps[4][:]'*krtimesttm(kr,mps_)
-    ref  = Kr*b
+    norm(Φmat-kr2mat(Φ))/norm(Φmat)
+
+    w       = rand(256,1);
+    mps,err = MPT_SVD(w,[4 4 4 4],0.0);
+    mps_    = transpose(getU(mps,4))
+    test    = mps[4][:]'*krtimesttm(Φ,mps_)
+    ref     = Φmat*w
     
     norm(test-ref')/norm(ref')
+
 
 #end
 
@@ -127,25 +130,36 @@ Ittm = eye([2 2 2;2 2 2]);
 S        = randn(8,8); S = S*S';
 Sttm,err = MPT_SVD(S,[2 2 2; 2 2 2],1e-15);
 
-X    = mpo2mat(\(Sttm,Kttm,[1,4,4,1]))
-norm(S\mpo2mat(Kttm)-X)
+#amen
+ref = mpo2mat(Sttm)\mpo2mat(Kttm)
+sol1 =  mpo2mat(\(Sttm,Kttm,0.0000001))
+norm(sol1-ref)/norm(ref)
+
+# \ with given ranks
+sol2 = mpo2mat(\(Sttm,Kttm,[1,4,4,1]))
+norm(sol2-ref)/norm(ref)
 ##############
 
-Attm,err = MPT_SVD(randn(64,64),[4 4 4 ; 4 4 4],0.0)
-Bttm     = TT_ALS(randn(4,4,4),[1,1,1,1])
-X        = mpo2mat(Attm)\mps2vec(Bttm)
-Xtest    = mps2vec(\(Attm,Bttm,[1,4,4,1]))
-norm(X-Xtest)/norm(X)
 
 # test with amen
 using MATLAB
 mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox')"
 mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/solve')"
 mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/core')"
-sol = mpo2mat(\(Sttm,Kttm,0.01))
-sol2 = mpo2mat(\(Sttm,Kttm,[1,4,4,1]))
-ref = mpo2mat(Sttm)\mpo2mat(Kttm)
-norm(sol-ref)/norm(ref)
-norm(sol2-ref)/norm(ref)
+A = randn(8,8); 
+B = randn(8,8); #B = B*B';
+b = randn(8,1); 
+
+Attm,err = MPT_SVD(A,[2 2 2 ; 2 2 2],0.0)
+btt,err  = MPT_SVD(b,[2 2 2; 1 1 1],0.0)
+Btt,err  = MPT_SVD(B,[2 2 2; 2 2 2],0.0)
+
+test = norm(mpo2mat(\(Attm,Btt,1e-10)))
+ref  = norm(mpo2mat(Attm)\mpo2mat(Btt))
+
+
+test = norm(mpo2mat(\(Attm,btt,1e-7)))
+ref  = norm(mpo2mat(Attm)\mpo2mat(btt))
+norm(test-ref)/norm(ref)
 
 
