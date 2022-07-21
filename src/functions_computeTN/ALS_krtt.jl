@@ -1,28 +1,27 @@
-function ALS_krtt(y::Vector,kr::Vector{Matrix},rnks::Vector{Int},maxiter)
-    # computes componente of tt from y = kr*tt with ALS:
+function ALS_krtt(y::Vector,kr::Vector{Matrix},rnks::Vector{Int},maxiter,λ::Float64)
+    # computes components of tt from y = kr*tt with ALS:
     # tt is first split into the to be updates component and the rest U, 
     # then U and kr are multiplied with each other giving Ũ
     # then y = Ũ*tt[d] is solved for tt[d]
 
     D     = size(kr,1)
     Md    = size(kr[1],2)
+    N     = length(y)
     cores = Vector{Array{Float64,3}}(undef,D)
-    for i = 1:D-1 # creating site-N canonical initial tensor train
-        tmp = qr(rand(rnks[i]*Md, rnks[i+1]))
-        cores[i] = reshape(Matrix(tmp.Q),(rnks[i], Md, rnks[i+1]))
+    for i = 1:D # creating initial tensor train
+        tmp = rand(rnks[i]*Md, rnks[i+1])
+        cores[i] = reshape(tmp,(rnks[i], Md, rnks[i+1]))
     end
-    cores[D] = reshape(rand(rnks[D]*Md),(rnks[D], Md, 1))
-    tt0      = MPT(cores,D)
+    tt0      = MPT(cores)
     tt       = tt0
     cova     = Vector{Matrix}(undef,D)
     for iter = 1:maxiter
         for d = 1:D
-            ttm     = getU(tt,d)
-            U       = krtimesttm(kr,transpose(ttm))
-            UtU     = U*U'
-            Uty     = U*y
-            tt[d]   = reshape(UtU\Uty,size(tt0[d]))
-            cova[d] = UtU\Matrix(I,length(tt[d]),length(tt[d]))
+            ttm     = getU(tt,d)   # works       
+            U       = krtimesttm(kr,transpose(ttm)) # works
+            tmp     = (U*U'+λ*Matrix(I,size(U,1),size(U,1)))
+            tt[d]   = reshape(tmp\(U*y),size(tt0[d]))
+            cova[d] = tmp\Matrix(I,length(tt[d]),length(tt[d]))
         end
     end
     return tt,cova
@@ -45,4 +44,12 @@ function getU(tt::MPT{3},d::Int)
     end
 
     return ttm
+end
+
+function kr2mat(Φ::Vector{Matrix})
+    Φ_mat = ones(size(Φ[1],1),1)
+    for d = size(Φ,1):-1:1
+        Φ_mat = KhatriRao(Φ_mat,Φ[d],1)
+    end    
+    return Φ_mat
 end
