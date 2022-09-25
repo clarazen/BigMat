@@ -199,6 +199,7 @@ function shiftMPTnorm(mpt::MPT,n::Int64,dir::Int64)
         mpt[n]       = reshape(Q, size(mpt[n]));
         mpt[n+dir]   = nmodeproduct(R,mpt[n+dir],ind);
         mpt.normcore = mpt.normcore + dir; 
+        return mpt
 end
 
 # function for ALS without orthogonalization
