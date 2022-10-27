@@ -17,7 +17,7 @@ import LinearAlgebra: diag
         
         return mps2mpo(\(A_,b_,eps),[sizeA1';sizeB2'])
     end
-
+#=
     function \(A::MPO,b::MPS,eps::Float64)
         # uses AMEn from TT-toolbox
         D    = Float64(order(A))
@@ -71,7 +71,7 @@ import LinearAlgebra: diag
         
         return MPT(cores)
     end
-
+=#
     function \(A::MPO,B::MPO,rnks::Vector)
         Ittm = eye([size(B,true)[2,:]'; size(B,true)[2,:]'])
         A_ = outerprod(A,Ittm)
