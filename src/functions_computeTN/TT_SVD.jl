@@ -33,7 +33,7 @@ function TT_SVD(tensor::Array{Float64},ϵ::Float64)
         C        = reshape(C,(rcurr*sizes[k+1], Int(length(C) / (rcurr*sizes[k+1])) ) );
     end
     cores[N] = reshape(C,(rprev,sizes[N],1));
-    return MPT(cores), sqrt(err2)/frobnorm
+    return MPT(cores,N), sqrt(err2)/frobnorm
 end
 
 function TT_SVD(tensor::Array{Float64},d::Int,ϵ::Float64)
@@ -48,7 +48,7 @@ function TT_SVD(tensor::Array{Float64},d::Int,ϵ::Float64)
         rprev = 1;
         sizes = size(tensor);
         C     = reshape( tensor, (sizes[1], Int(length(tensor) / sizes[1]) ));
-        for k = 1 : d
+        for k = 1 : D
             # truncated svd 
             F   = svd!(C); 
             rcurr = length(F.S);
@@ -68,6 +68,6 @@ function TT_SVD(tensor::Array{Float64},d::Int,ϵ::Float64)
             C        = reshape(C,(rcurr*sizes[k+1], Int(length(C) / (rcurr*sizes[k+1])) ) );
             S        = F.S[1:rcurr]
         end
-        return MPT(cores), S, sqrt(err2)/frobnorm
+        return MPT(cores,D), S, sqrt(err2)/frobnorm
     end
     
