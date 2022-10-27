@@ -1,6 +1,6 @@
 module BigMat
 
-using LinearAlgebra, Base, Random, SparseArrays, MATLAB
+using LinearAlgebra, Base, Random, SparseArrays #, MATLAB
     import LinearAlgebra: norm
 
     # functions that are available for the user
