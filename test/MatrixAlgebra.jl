@@ -104,24 +104,24 @@ norm(sol2-ref)/norm(ref)
 
 
 # test with amen
-using MATLAB
-mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox')"
-mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/solve')"
-mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/core')"
-A = randn(8,8); 
-B = randn(8,8); #B = B*B';
-b = randn(8,1); 
+#using MATLAB
+#mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox')"
+#mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/solve')"
+#mat"addpath('C:/Users/cmmenzen/surfdrive/Code/Code from others/TT-Toolbox/core')"
+#A = randn(8,8); 
+#B = randn(8,8); #B = B*B';
+#b = randn(8,1); 
 
-Attm,err = MPT_SVD(A,[2 2 2 ; 2 2 2],0.0)
-btt,err  = MPT_SVD(b,[2 2 2; 1 1 1],0.0)
-Btt,err  = MPT_SVD(B,[2 2 2; 2 2 2],0.0)
+#Attm,err = MPT_SVD(A,[2 2 2 ; 2 2 2],0.0)
+#btt,err  = MPT_SVD(b,[2 2 2; 1 1 1],0.0)
+#Btt,err  = MPT_SVD(B,[2 2 2; 2 2 2],0.0)
 
-test = norm(mpo2mat(\(Attm,Btt,1e-10)))
-ref  = norm(mpo2mat(Attm)\mpo2mat(Btt))
+#test = norm(mpo2mat(\(Attm,Btt,1e-10)))
+#ref  = norm(mpo2mat(Attm)\mpo2mat(Btt))
 
 
-test = norm(mpo2mat(\(Attm,btt,1e-7)))
-ref  = norm(mpo2mat(Attm)\mpo2mat(btt))
-norm(test-ref)/norm(ref)
+#test = norm(mpo2mat(\(Attm,btt,1e-7)))
+#ref  = norm(mpo2mat(Attm)\mpo2mat(btt))
+#norm(test-ref)/norm(ref)
 
 
