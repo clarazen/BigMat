@@ -7,7 +7,7 @@ using LinearAlgebra, Base, Random, SparseArrays #, MATLAB
     export MPT, size, order, length, rank, norm,
            getelement, getrow, getcol, outerprod,
            MPT_SVD, TTm_ALS, TT_ALS, eye, khr2ttm, sparseblockTTm,
-           shiftMPTnorm,
+           shiftMPTnorm, initialTT,
            mps2vec, mpo2mat, kr2mat,
            KhatriRao, transpose, roundTT, 
            krtimesttm,
