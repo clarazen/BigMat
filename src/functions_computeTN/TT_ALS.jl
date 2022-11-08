@@ -4,15 +4,15 @@
 
 # no initial tt, automatically with orthogonalization
 function TT_ALS(tensor::Array{Float64},rnks::Vector{Int64})
-    N     = ndims(tensor);
+    D     = ndims(tensor);
     sizes = size(tensor);
-    cores = Vector{Array{Float64,3}}(undef,N);
-    for i = 1:N-1 # creating site-N canonical initial tensor train
+    cores = Vector{Array{Float64,3}}(undef,D);
+    for i = 1:D-1 # creating site-D canonical initial tensor train
         tmp = qr(rand(rnks[i]*sizes[i], rnks[i+1]));
         cores[i] = reshape(Matrix(tmp.Q),(rnks[i], sizes[i], rnks[i+1]));
     end
-    cores[N] = reshape(rand(rnks[N]*sizes[N]),(rnks[N], sizes[N], 1));
-    tt0 = MPT(cores,N);
+    cores[D] = reshape(rand(rnks[D]*sizes[D]),(rnks[D], sizes[D], 1));
+    tt0 = MPT(cores,D);
     return TT_ALS(tensor,tt0)
 end
 
