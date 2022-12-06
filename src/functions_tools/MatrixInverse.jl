@@ -1,14 +1,13 @@
 import Base: \, transpose  
 import LinearAlgebra: diag
 
-    function \(A::MPO,b::Vector)
+    function \(A::MPT{4},b::Vector)
         middleind = Matrix(reduce(vcat,transpose.(collect.(size(A))))[:,1]');
         btt,err   = MPT_SVD(b,middleind,0.0);
         return A\btt
     end
 
-    function \(A::MPO,B::MPO,eps::Float64)
-        # uses AMEn from TT-toolbox
+    function \(A::MPT{4},B::MPT{4},eps::Float64)
         sizeA1 = size(A,true)[1,:];
         sizeB2 = size(B,true)[2,:];
         Ittm   = eye([sizeB2'; sizeB2'])
@@ -72,15 +71,15 @@ import LinearAlgebra: diag
         return MPT(cores)
     end
 =#
-    function \(A::MPO,B::MPO,rnks::Vector)
+    function \(A::MPT{4},B::MPT{4},rnks::Vector)
         Ittm = eye([size(B,true)[2,:]'; size(B,true)[2,:]'])
-        A_ = outerprod(A,Ittm)
-        b  = mpo2mps(B)
+        A_   = outerprod(A,Ittm) + transpose(outerprod(A,Ittm))
+        b    = mpo2mps(B)
         tmp  = \(A_,b,rnks)
         return mps2mpo(tmp,[size(A,true)[1,:]';size(B,true)[2,:]'])
     end
 
-    function \(A::MPO,b::MPS,rnks::Vector)
+    function \(A::MPT{4},b::MPT{3},rnks::Vector)
         N     = order(b);
         cores = Vector{Array{Float64,3}}(undef,N);
         maxiter = 10;
@@ -113,7 +112,7 @@ import LinearAlgebra: diag
         return x
     end
     
-    function \(A::MPO,b::MPS)
+    function \(A::MPT{4},b::MPT{3})
     ## DESCRIPTION
     # Inverts a matrix in mpo format, by solving Ax = b, where x is the unknown
     # 

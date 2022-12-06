@@ -11,7 +11,7 @@ using LinearAlgebra, Base, Random, SparseArrays #, MATLAB
            mps2vec, mpo2mat, kr2mat,
            KhatriRao, transpose, roundTT, 
            krtimesttm,
-           nmodeproduct, contractmodes,
+           nmodeproduct, contractmodes, contractcores,
            mpo2mps, mps2mpo,
            unfold, diag, matrixbyvector, vectorbymatrix
 

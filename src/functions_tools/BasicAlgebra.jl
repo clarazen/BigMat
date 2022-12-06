@@ -288,3 +288,34 @@
         return C
     end
 
+    function KhatriRao(A::Matrix{Float64},B::SparseMatrixCSC,dims::Int64)
+        if dims == 1
+            C = zeros(size(A,1),size(A,2)*size(B,2));
+            @inbounds @simd for i = 1:size(A,1)
+                @views kron!(C[i,:],A[i,:],B[i,:])
+            end
+        elseif dims == 2
+            C = zeros(size(A,1)*size(B,1),size(A,2));
+            @inbounds @simd for i = 1:size(A,2)
+                @views kron!(C[:,i],A[:,i],B[:,i])
+            end
+        end
+
+        return C
+    end
+
+    function KhatriRao(A::SparseMatrixCSC,B::Matrix{Float64},dims::Int64)
+        if dims == 1
+            C = zeros(size(A,1),size(A,2)*size(B,2));
+            @inbounds @simd for i = 1:size(A,1)
+                @views kron!(C[i,:],A[i,:],B[i,:])
+            end
+        elseif dims == 2
+            C = zeros(size(A,1)*size(B,1),size(A,2));
+            @inbounds @simd for i = 1:size(A,2)
+                @views kron!(C[:,i],A[:,i],B[:,i])
+            end
+        end
+
+        return C
+    end
